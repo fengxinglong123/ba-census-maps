@@ -1,0 +1,16 @@
+{
+	"name": "ba-census-maps",
+	"version": "0.0.1",
+	"private": true,
+	"author":"Nenad Golubović <me@nenadg.com>",
+	"description":"ba census data maps visualization",
+	"scripts": {
+		"start": "node app"
+	},
+	"dependencies": {
+		"body-parser": "^1.8.2",
+		"express":"^4.13.3",
+		"serve-favicon": "^2.0.1",
+		"excel":"0.1.6"
+	}
+}
