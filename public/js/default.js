@@ -37,7 +37,15 @@ window.addEventListener('load', function(){
         cantonsBorders,
         administrativeBorders,
         moved = true,
-        currentLevel = 0;
+        currentLevel = 0,
+        sets = [];
+
+    var color_domain = [50, 150, 350, 750, 1500],
+        ext_color_domain = [0, 50, 150, 350, 750, 1500],
+        legend_labels = ["< 50", "50+", "150+", "350+", "750+", "> 1500"],
+        color = d3.scale.threshold()
+            .domain(color_domain)
+            .range(["#adfcad", "#ffcb40", "#ffba00", "#ff7d73", "#ff4e40", "#ff1300"]);
 
     var data = {
         po_starosti_pojedinacno: null,
@@ -80,8 +88,8 @@ window.addEventListener('load', function(){
             // Also, adjust for fpsInterval not being multiple of 16.67
             then = now - (elapsed % fpsInterval);
 
-            if(moved)
-                draw();
+            //if(moved)
+               // draw();
         }
     };
 
@@ -114,10 +122,23 @@ window.addEventListener('load', function(){
         if(currentLevel == 3){
             c.strokeStyle = "#006699", c.lineWidth =1.5, c.beginPath(), path(borders), c.stroke();
             c.strokeStyle = "#0099cc", c.lineWidth = 0.5, c.beginPath(), path(administrativeBorders), c.stroke();
-        }
-    }
 
-    
+            c.fillStyle = "rgba(44, 55, 219, 0.3)", c.beginPath(), 
+            path.context(c)(administrativeBorders), 
+            c.fill(); 
+
+
+           
+            
+            
+        }
+
+        /*
+            .style("fill", function(d) {
+    return color(rateById[d.properties.region]); 
+  })
+        */
+    }
 
     var detectCountry = function(inverted){
        
@@ -169,7 +190,8 @@ window.addEventListener('load', function(){
         if(country && country.name){
             if(lastCountryName != country.name){
 
-                //c.fillStyle = "rgba(44, 55, 219, 0.4)", c.beginPath(), path(country.geometry), c.fill();
+                // incomplete polygons so this is disabled
+                // c.fillStyle = "rgba(44, 55, 219, 0.4)", c.beginPath(), path(country.geometry), c.fill();
 
                 // country text
                 c.fillStyle = 'rgba(66, 66, 66, 0.8)', c.beginPath(), c.fillRect(x -1, y -10, ((decodeURI(country.name)).toUpperCase().length * 9.5), 14);
@@ -187,61 +209,100 @@ window.addEventListener('load', function(){
         var dataset = {
             name: null,
             sets: [],
-            territories: []
+            groups: []
         };
 
-        dataset.name = raw[1][1];
+        var nameIndex = dimensionIndex = dataIndex = 0;
 
+        for(var i in raw){
+            for(var j in raw[i]){
+                var column = raw[i][j];
+
+                if(column.length && isNaN(column) && !dataset.name){
+                    nameIndex = i;
+                    dataset.name = column;
+                    sets.push({ dataset: dataset.name, sets: [] });
+                    continue;
+                }
+            };
+
+           if(dataset.name)
+               continue;
+        }
 
         // dimension sets
-       
-        raw[7].forEach(function(column, columnIndex){
-            if(columnIndex >= 3 && column.length){
-               
-                dataset.sets.push(column);
-            }
+        var dim = raw.filter(function(row,i){
+            return i >= nameIndex &&  i <= 7;
         });
 
-        var ci = 0;
+        dim.forEach(function(row, rowIndex){
 
-        raw.forEach(function(row, index){
-            if(index >= 8){
-                var territory = [],
-                    len = row.length;
-                row.forEach(function(column, columnIndex){
-                    if(column.length){
-                       
-                        territory.push(column);
+            row.forEach(function(column, columnIndex){
+                if(columnIndex >= 3 && column.length && isNaN(column) && ((row[columnIndex + 1] && row[columnIndex + 1].length) 
+                    || dataset.sets.indexOf(row[columnIndex - 1]) > -1) ){
+                    
+                    if(dimensionIndex == 0){
+                        dimensionIndex = parseInt(nameIndex) + parseInt(rowIndex);
                     }
+                   
+                    sets.forEach(function(set){
+                        if(set.dataset == dataset.name)
+                            set.sets.push(column);
+                    });
+
+                    dataset.sets.push(column);
+                }
+            })
+        });
+
+        var ci = 0,
+            lastName;
+        
+        raw.forEach(function(row, index){
+            if(index > dimensionIndex){
+                var group = [],
+                    len = row.length;
+
+                row.forEach(function(column, columnIndex){
+                     group.push(column);
+
                 });
 
-                if(territory.length && ci % 3 == 0 ){
+                if(group.length){
+
+                    if (ci % 3 == 0)
+                        lastName = group[0];
+
                     var obj = {
-                        name: territory[0],
-                        total: territory[1]
+                        name: group[0].length ? group[0] : lastName,
+                        pol: group[1],
+                        total: group[2],
+                        per_set: {}
                     }
 
                     dataset.sets.forEach(function(setName, setIndex){
-                        
-                        obj[setName] = territory[setIndex + 2]
+                        obj.per_set[setName] = group[setIndex + 3 ];
                     });
 
-                    dataset.territories.push(obj);
+                    dataset.groups.push(obj);
                 }
 
                 ci++;
             }
-        })
-
+        });
+        
         return dataset;
     };
 
     var loader = function(error, bosnia, entities, cantons, administrative, sve){
+        console.log(administrative);
 
         borders = topojson.mesh(bosnia, bosnia.objects.collection);
         entitiesBorders = topojson.mesh(entities, entities.objects.admin_level_4);
         cantonsBorders = topojson.mesh(cantons, cantons.objects.admin_level_5);
-        administrativeBorders = topojson.mesh(administrative, administrative.objects.collection);
+        administrativeBorders = topojson.mesh(administrative, administrative.objects.BIH_adm3);
+        //for (x in geodata) {geodata[x].geometry.coordinates[0] = geodata[x].geometry.coordinates[0].reverse()}
+
         
         features = topojson.feature(bosnia, bosnia.objects.collection).features;
         
@@ -249,11 +310,19 @@ window.addEventListener('load', function(){
             bosnia: topojson.feature(bosnia, bosnia.objects.collection).features,
             entities: topojson.feature(entities, entities.objects.admin_level_4).features,
             cantons: topojson.feature(cantons, cantons.objects.admin_level_5).features,
-            administrative: topojson.feature(administrative, administrative.objects.collection).features
+            administrative: topojson.feature(administrative, administrative.objects.BIH_adm3).features,
+            raw: {
+                bosnia: bosnia,
+                entities: entities,
+                cantons: cantons,
+                administrative: administrative
+            }
         };
 
+        // excluded fields doesn't comply to current 
+        // algorhitmic matching so i excluded them
         data = {
-            po_starosti_pojedinacno: sve.po_starosti_pojedinacno,
+            //po_starosti_pojedinacno: sve.po_starosti_pojedinacno,
             po_starosti_petogodisnje: sve.po_starosti_petogodisnje,
             po_nacionalnosti: sve.po_nacionalnosti,
             po_vjeroispovjesti: sve.po_vjeroispovjesti,
@@ -263,19 +332,27 @@ window.addEventListener('load', function(){
             nepismeno_stanovnistvo: sve.nepismeno_stanovnistvo,
             po_zavrsenoj_skoli: sve.po_zavrsenoj_skoli,
             racunarski_pismeno: sve.racunarski_pismeno,
-            radno_sposobno_stanovnistvo: sve.radno_sposobno_stanovnistvo,
+            //radno_sposobno_stanovnistvo: sve.radno_sposobno_stanovnistvo,
             osobe_sa_poteskocama: sve.osobe_sa_poteskocama,
-            domacinstva: sve.domacinstva,
+            //domacinstva: sve.domacinstva,
             stambene_zgrade: sve.stambene_zgrade,
             stanovi_povrsina: sve.stanovi_povrsina,
             stanovi_broj_osoba: sve.stanovi_broj_osoba,
-            poljoprivredna_domacinstva: sve.poljoprivredna_domacinstva
+            //poljoprivredna_domacinstva: sve.poljoprivredna_domacinstva
         };
 
-        window.census_data = data;
+        var parsed = {};
+
+        for(var i in data){
+            var category = data[i];
+
+            parsed[i] = createDataSet(category);
+        }
+
         window.topo = topo;
         window.draw = draw;
-        window.createDataSet = createDataSet;
+        window.data = parsed;
+        window.sets = sets;
 
         loadDomElements();
         animate();
@@ -285,9 +362,9 @@ window.addEventListener('load', function(){
         var canvas = document.querySelector('canvas');
         canvas.style.cssText = 'float: left';
 
-        var selector = document.createElement('select');
-        selector.style.cssText = 'float: left';
-        selector.onchange = function(e){
+        var levelSelector = document.createElement('select');
+        levelSelector.style.cssText = 'float: left';
+        levelSelector.onchange = function(e){
             
             currentLevel = parseInt(e.target.value);
 
@@ -307,7 +384,7 @@ window.addEventListener('load', function(){
             draw();
         };
 
-        document.body.appendChild(selector);
+        document.body.appendChild(levelSelector);
 
         var options = [
             ['0', 'Bosna i Hercegovina'],
@@ -321,7 +398,39 @@ window.addEventListener('load', function(){
             option.text = options[i][1];
             option.value = options[i][0];
 
-            selector.appendChild(option);
+            levelSelector.appendChild(option);
+        }
+
+        var setSelector = document.createElement('select');
+        setSelector.style.cssText = 'float: left; max-width: 150px;';
+        setSelector.onchange = function(e){
+            
+           /* currentLevel = parseInt(e.target.value);
+
+            if(currentLevel == 0)
+                features = topo.bosnia;
+
+            if(currentLevel == 1) 
+                features = topo.entities;
+
+            if(currentLevel == 2)
+                features = topo.cantons;
+        
+            if(currentLevel == 3){
+                features = topo.administrative;
+            }*/
+
+            //draw();
+        };
+
+        document.body.appendChild(setSelector);
+
+        for(var i in sets){
+            var option = document.createElement('option');
+            option.text = sets[i].dataset.split(' / ')[0];
+            option.value = sets[i].dataset.split(' / ')[0];
+
+            setSelector.appendChild(option);
         }
     };
 
@@ -329,7 +438,7 @@ window.addEventListener('load', function(){
         .defer(d3.json, "/bosnia-and-herzegovina/bosnia.topojson")
         .defer(d3.json, "/bosnia-and-herzegovina/admin_level_4_entities.topojson")
         .defer(d3.json, "/bosnia-and-herzegovina/admin_level_5_kantoni.topojson")
-        .defer(d3.json, "/bosnia-and-herzegovina/administrative.topojson")
+        .defer(d3.json, "/bosnia-and-herzegovina/output(1).json")
         .defer(d3.json, "/sve")
         // pojedinacni segmenti popisa
         /*.defer(d3.json, "/2")
