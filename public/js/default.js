@@ -36,7 +36,35 @@ window.addEventListener('load', function(){
         entitiesBorders,
         cantonsBorders,
         administrativeBorders,
-        moved = true;
+        moved = true,
+        currentLevel = 0;
+
+    var data = {
+        po_starosti_pojedinacno: null,
+        po_starosti_petogodisnje: null,
+        po_nacionalnosti: null,
+        po_vjeroispovjesti: null,
+        po_maternjem_jeziku: null,
+        po_bracnom_stanju: null,
+        zensko_stanovnistvo_zivorodjeni: null,
+        nepismeno_stanovnistvo: null,
+        po_zavrsenoj_skoli: null,
+        racunarski_pismeno: null,
+        radno_sposobno_stanovnistvo: null,
+        osobe_sa_poteskocama: null,
+        domacinstva: null,
+        stambene_zgrade: null,
+        stanovi_povrsina: null,
+        stanovi_broj_osoba: null,
+        poljoprivredna_domacinstva: null
+    };
+
+    var topo = {
+        bosnia: null,
+        entities: null,
+        cantons: null,
+        administrative: null
+    };
 
     var animate = function() {
 
@@ -72,22 +100,24 @@ window.addEventListener('load', function(){
         c.restore();
 
         // borders
-        c.strokeStyle = "#006699", c.lineWidth =1.5, c.beginPath(), path(borders), c.stroke();
-        c.strokeStyle = "#0077aa", c.lineWidth = 1.2, c.beginPath(), path(entitiesBorders), c.stroke();
-        c.strokeStyle = "#0088bb", c.lineWidth = 1, c.beginPath(), path(cantonsBorders), c.stroke();
-        c.strokeStyle = "#0099cc", c.lineWidth = 0.5, c.beginPath(), path(administrativeBorders), c.stroke();
+        if(currentLevel == 0)
+            c.strokeStyle = "#006699", c.lineWidth =1.5, c.beginPath(), path(borders), c.stroke();
+
+        if(currentLevel == 1)
+            c.strokeStyle = "#0077aa", c.lineWidth = 1.2, c.beginPath(), path(entitiesBorders), c.stroke();
+        
+        if(currentLevel == 2){
+            c.strokeStyle = "#006699", c.lineWidth =1.5, c.beginPath(), path(borders), c.stroke();
+            c.strokeStyle = "#0088bb", c.lineWidth = 1, c.beginPath(), path(cantonsBorders), c.stroke(); 
+        }
+
+        if(currentLevel == 3){
+            c.strokeStyle = "#006699", c.lineWidth =1.5, c.beginPath(), path(borders), c.stroke();
+            c.strokeStyle = "#0099cc", c.lineWidth = 0.5, c.beginPath(), path(administrativeBorders), c.stroke();
+        }
     }
 
-    var loader = function(error, bosnia, entities, cantons, administrative){
-        borders = topojson.mesh(bosnia, bosnia.objects.collection);
-        entitiesBorders = topojson.mesh(entities, entities.objects.admin_level_4);
-        cantonsBorders = topojson.mesh(cantons, cantons.objects.admin_level_5);
-        administrativeBorders = topojson.mesh(administrative, administrative.objects.collection);
-        
-        features = topojson.feature(administrative, administrative.objects.collection).features;
-
-        animate();
-    };
+    
 
     var detectCountry = function(inverted){
        
@@ -96,9 +126,8 @@ window.addEventListener('load', function(){
 
         var foundCountryElement;
 
-       
-
-            features.forEach(function(element){
+    
+        features.forEach(function(element){
 
 
             if(element.geometry.type == 'Polygon'){
@@ -112,7 +141,7 @@ window.addEventListener('load', function(){
                     foundCountryElement = element;
                 }
             }
-            })
+        })
         
        
         var name = foundCountryElement? foundCountryElement.properties.name: null,
@@ -126,7 +155,6 @@ window.addEventListener('load', function(){
 
     elem.addEventListener('mousemove', function(event) {
 
-     
         var x = event.pageX - elemLeft,
             y = event.pageY - elemTop,
             inverted = projection.invert([x,y]),
@@ -155,12 +183,116 @@ window.addEventListener('load', function(){
         }   
     }, false);
 
+    var loader = function(error, bosnia, entities, cantons, administrative, sve){
+
+        borders = topojson.mesh(bosnia, bosnia.objects.collection);
+        entitiesBorders = topojson.mesh(entities, entities.objects.admin_level_4);
+        cantonsBorders = topojson.mesh(cantons, cantons.objects.admin_level_5);
+        administrativeBorders = topojson.mesh(administrative, administrative.objects.collection);
+        
+        features = topojson.feature(bosnia, bosnia.objects.collection).features;
+        
+        topo = {
+            bosnia: topojson.feature(bosnia, bosnia.objects.collection).features,
+            entities: topojson.feature(entities, entities.objects.admin_level_4).features,
+            cantons: topojson.feature(cantons, cantons.objects.admin_level_5).features,
+            administrative: topojson.feature(administrative, administrative.objects.collection).features
+        };
+
+        data = {
+            po_starosti_pojedinacno: sve.po_starosti_pojedinacno,
+            po_starosti_petogodisnje: sve.po_starosti_petogodisnje,
+            po_nacionalnosti: sve.po_nacionalnosti,
+            po_vjeroispovjesti: sve.po_vjeroispovjesti,
+            po_maternjem_jeziku: sve.po_maternjem_jeziku,
+            po_bracnom_stanju: sve.po_bracnom_stanju,
+            zensko_stanovnistvo_zivorodjeni: sve.zensko_stanovnistvo_zivorodjeni,
+            nepismeno_stanovnistvo: sve.nepismeno_stanovnistvo,
+            po_zavrsenoj_skoli: sve.po_zavrsenoj_skoli,
+            racunarski_pismeno: sve.racunarski_pismeno,
+            radno_sposobno_stanovnistvo: sve.radno_sposobno_stanovnistvo,
+            osobe_sa_poteskocama: sve.osobe_sa_poteskocama,
+            domacinstva: sve.domacinstva,
+            stambene_zgrade: sve.stambene_zgrade,
+            stanovi_povrsina: sve.stanovi_povrsina,
+            stanovi_broj_osoba: sve.stanovi_broj_osoba,
+            poljoprivredna_domacinstva: sve.poljoprivredna_domacinstva
+        };
+
+        window.census_data = data;
+        window.draw = draw;
+        loadDomElements();
+        animate();
+    };
+
+    var loadDomElements = function(){
+        var canvas = document.querySelector('canvas');
+        canvas.style.cssText = 'float: left';
+
+        var selector = document.createElement('select');
+        selector.style.cssText = 'float: left';
+        selector.onchange = function(e){
+            
+            currentLevel = parseInt(e.target.value);
+
+            if(currentLevel == 0)
+                features = topo.bosnia;
+
+            if(currentLevel == 1) 
+                features = topo.entities;
+
+            if(currentLevel == 2)
+                features = topo.cantons;
+
+            if(currentLevel == 3)
+                features == topo.administrative;
+
+            draw();
+        };
+
+        document.body.appendChild(selector);
+
+        var options = [
+            ['0', 'Bosna i Hercegovina'],
+            ['1', 'Entiteti'],
+            ['2', 'Kantoni'],
+            ['3', 'Administrativne jedinice']
+        ];
+
+        for(var i in options){
+            var option = document.createElement('option');
+            option.text = options[i][1];
+            option.value = options[i][0];
+
+            selector.appendChild(option);
+        }
+    };
+
     queue()
         .defer(d3.json, "/bosnia-and-herzegovina/bosnia.topojson")
         .defer(d3.json, "/bosnia-and-herzegovina/admin_level_4_entities.topojson")
         .defer(d3.json, "/bosnia-and-herzegovina/admin_level_5_kantoni.topojson")
         .defer(d3.json, "/bosnia-and-herzegovina/administrative.topojson")
-        /*.defer(d3.json, "/bosnia-and-herzegovina/regions.geojson")
+        .defer(d3.json, "/sve")
+        // pojedinacni segmenti popisa
+        /*.defer(d3.json, "/2")
+        .defer(d3.json, "/3")
+        .defer(d3.json, "/4")
+        .defer(d3.json, "/5")
+        .defer(d3.json, "/6")
+        .defer(d3.json, "/7")
+        .defer(d3.json, "/8")
+        .defer(d3.json, "/9")
+        .defer(d3.json, "/10")
+        .defer(d3.json, "/11")
+        .defer(d3.json, "/12")
+        .defer(d3.json, "/13")
+        .defer(d3.json, "/14")
+        .defer(d3.json, "/15")
+        .defer(d3.json, "/16")
+        .defer(d3.json, "/17")
+        // pojedinacni geojson podaci
+        .defer(d3.json, "/bosnia-and-herzegovina/regions.geojson")
         .defer(d3.json, "/bosnia-and-herzegovina/admin_level_0.geojson")
         .defer(d3.json, "/bosnia-and-herzegovina/admin_level_1.geojson")
         .defer(d3.json, "/bosnia-and-herzegovina/admin_level_2.geojson")
