@@ -183,6 +183,59 @@ window.addEventListener('load', function(){
         }   
     }, false);
 
+    var createDataSet = function(raw){
+        var dataset = {
+            name: null,
+            sets: [],
+            territories: []
+        };
+
+        dataset.name = raw[1][1];
+
+
+        // dimension sets
+       
+        raw[7].forEach(function(column, columnIndex){
+            if(columnIndex >= 3 && column.length){
+               
+                dataset.sets.push(column);
+            }
+        });
+
+        var ci = 0;
+
+        raw.forEach(function(row, index){
+            if(index >= 8){
+                var territory = [],
+                    len = row.length;
+                row.forEach(function(column, columnIndex){
+                    if(column.length){
+                       
+                        territory.push(column);
+                    }
+                });
+
+                if(territory.length && ci % 3 == 0 ){
+                    var obj = {
+                        name: territory[0],
+                        total: territory[1]
+                    }
+
+                    dataset.sets.forEach(function(setName, setIndex){
+                        
+                        obj[setName] = territory[setIndex + 2]
+                    });
+
+                    dataset.territories.push(obj);
+                }
+
+                ci++;
+            }
+        })
+
+        return dataset;
+    };
+
     var loader = function(error, bosnia, entities, cantons, administrative, sve){
 
         borders = topojson.mesh(bosnia, bosnia.objects.collection);
@@ -220,7 +273,10 @@ window.addEventListener('load', function(){
         };
 
         window.census_data = data;
+        window.topo = topo;
         window.draw = draw;
+        window.createDataSet = createDataSet;
+
         loadDomElements();
         animate();
     };
@@ -243,9 +299,10 @@ window.addEventListener('load', function(){
 
             if(currentLevel == 2)
                 features = topo.cantons;
-
-            if(currentLevel == 3)
-                features == topo.administrative;
+        
+            if(currentLevel == 3){
+                features = topo.administrative;
+            }
 
             draw();
         };
