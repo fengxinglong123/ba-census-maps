@@ -4,9 +4,24 @@ window.addEventListener('load', function(){
     var width = 950,
         height = 650;
 
-    var projection = d3.geo.mercator()
-        .scale(500)
-        .translate([width / 2, height / 2]);
+    /*var rateById = d3.map();
+
+    var quantize = d3.scale.quantize()
+        .domain([0, .15])
+        .range(d3.range(9).map(function(i) { return "q" + i + "-9"; }));*/
+
+    var projection = d3.geo.satellite()
+        .distance(1.5)
+        .scale(9797)
+        .rotate([-16.560000000000002, -43.56, 4.999999999999998])
+        .center([1, 1])
+        .tilt(7)
+        .clipAngle(Math.acos(1 / 1.1) * 180 / Math.PI - 1e-6)
+        .precision(.1);
+
+    var graticule = d3.geo.graticule()
+        .extent([[-90, -80], [90, 80]])
+        .step([2, 2]);
 
     var canvas = d3.select("body").append("canvas")
         .attr("width", width)
@@ -88,16 +103,12 @@ window.addEventListener('load', function(){
             // Also, adjust for fpsInterval not being multiple of 16.67
             then = now - (elapsed % fpsInterval);
 
-            //if(moved)
-               // draw();
+           // if(moved)
+             //   draw();
         }
     };
 
     var draw = function(){
-        projection
-            .scale(9050)
-            .center([18, 44]);
-
         c.save();
 
         // Use the identity matrix while clearing the canvas
@@ -107,37 +118,49 @@ window.addEventListener('load', function(){
         // Restore the transform
         c.restore();
 
-        // borders
-        if(currentLevel == 0)
-            c.strokeStyle = "#006699", c.lineWidth =1.5, c.beginPath(), path(borders), c.stroke();
+        c.strokeStyle = "#333", c.lineWidth = .5, c.beginPath(), path.context(c)(graticule()), c.stroke();
 
-        if(currentLevel == 1)
+        // borders
+        if(currentLevel == 0){
+            c.strokeStyle = "#006699", c.lineWidth =1.5, c.beginPath(), path(borders), c.stroke();
+            //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(borders), c.stroke();
+        }
+
+        if(currentLevel == 1){
             c.strokeStyle = "#0077aa", c.lineWidth = 1.2, c.beginPath(), path(entitiesBorders), c.stroke();
+            colorAll();
+        }
         
         if(currentLevel == 2){
             c.strokeStyle = "#006699", c.lineWidth =1.5, c.beginPath(), path(borders), c.stroke();
             c.strokeStyle = "#0088bb", c.lineWidth = 1, c.beginPath(), path(cantonsBorders), c.stroke(); 
+
+            //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(borders), c.stroke();
+            //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(cantonsBorders), c.stroke();
         }
 
         if(currentLevel == 3){
             c.strokeStyle = "#006699", c.lineWidth =1.5, c.beginPath(), path(borders), c.stroke();
             c.strokeStyle = "#0099cc", c.lineWidth = 0.5, c.beginPath(), path(administrativeBorders), c.stroke();
 
-            c.fillStyle = "rgba(44, 55, 219, 0.3)", c.beginPath(), 
-            path.context(c)(administrativeBorders), 
-            c.fill(); 
-
-
-           
-            
-            
+            //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(borders), c.stroke();
+            //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(administrativeBorders), c.stroke();
         }
 
-        /*
-            .style("fill", function(d) {
-    return color(rateById[d.properties.region]); 
-  })
-        */
+    }
+
+    var colorAll = function(){
+        var inverted = projection.invert([-180,180]);
+        features.forEach(function(element){
+                //color(100)
+            console.log(element.properties['name:bs']);
+            //c.fillStyle = "rgba(0, 102, 153, 0.4)", c.beginPath(), path(element.geometry), c.fill();
+            var pat=c.createPattern(document.querySelector('#shade'),"repeat");
+            //c.rect(0,0,150,100);
+            path(element.geometry)
+            c.fillStyle=pat;
+            c.fill()
+        })
     }
 
     var detectCountry = function(inverted){
@@ -191,7 +214,7 @@ window.addEventListener('load', function(){
             if(lastCountryName != country.name){
 
                 // incomplete polygons so this is disabled
-                // c.fillStyle = "rgba(44, 55, 219, 0.4)", c.beginPath(), path(country.geometry), c.fill();
+                c.fillStyle = "rgba(0, 102, 153, 0.4)", c.beginPath(), path(country.geometry), c.fill();
 
                 // country text
                 c.fillStyle = 'rgba(66, 66, 66, 0.8)', c.beginPath(), c.fillRect(x -1, y -10, ((decodeURI(country.name)).toUpperCase().length * 9.5), 14);
@@ -300,7 +323,7 @@ window.addEventListener('load', function(){
         borders = topojson.mesh(bosnia, bosnia.objects.collection);
         entitiesBorders = topojson.mesh(entities, entities.objects.admin_level_4);
         cantonsBorders = topojson.mesh(cantons, cantons.objects.admin_level_5);
-        administrativeBorders = topojson.mesh(administrative, administrative.objects.BIH_adm3);
+        administrativeBorders = topojson.mesh(administrative, administrative.objects.administrative_ba);
         //for (x in geodata) {geodata[x].geometry.coordinates[0] = geodata[x].geometry.coordinates[0].reverse()}
 
         
@@ -310,7 +333,7 @@ window.addEventListener('load', function(){
             bosnia: topojson.feature(bosnia, bosnia.objects.collection).features,
             entities: topojson.feature(entities, entities.objects.admin_level_4).features,
             cantons: topojson.feature(cantons, cantons.objects.admin_level_5).features,
-            administrative: topojson.feature(administrative, administrative.objects.BIH_adm3).features,
+            administrative: topojson.feature(administrative, administrative.objects.administrative_ba).features,
             raw: {
                 bosnia: bosnia,
                 entities: entities,
@@ -438,7 +461,7 @@ window.addEventListener('load', function(){
         .defer(d3.json, "/bosnia-and-herzegovina/bosnia.topojson")
         .defer(d3.json, "/bosnia-and-herzegovina/admin_level_4_entities.topojson")
         .defer(d3.json, "/bosnia-and-herzegovina/admin_level_5_kantoni.topojson")
-        .defer(d3.json, "/bosnia-and-herzegovina/output(1).json")
+        .defer(d3.json, "/bosnia-and-herzegovina/administrative_ba.topojson")
         .defer(d3.json, "/sve")
         // pojedinacni segmenti popisa
         /*.defer(d3.json, "/2")
