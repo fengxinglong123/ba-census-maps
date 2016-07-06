@@ -53,16 +53,24 @@ window.addEventListener('load', function(){
         administrativeBorders,
         moved = true,
         currentLevel = 0,
+        currentSet = 'po_starosti_petogodisnje',
         sets = [];
 
-    var color_domain = [50, 150, 350, 750, 1500],
+    var color_domain = [50, 200, 500, 5000, 20000, 
+                        50000, 60000, 70000, 90000, 
+                        100000, 300000, 600000, 700000,
+                        800000, 1200000, 1500000, 1900000,
+                        2000000, 2300000, 2500000, 2900000,
+                        3100000, 3500000, 3900000, 4100000 ],
         ext_color_domain = [0, 50, 150, 350, 750, 1500],
-        legend_labels = ["< 50", "50+", "150+", "350+", "750+", "> 1500"],
+        //legend_labels = ["< 50", "50+", "150+", "350+", "750+", "> 1500"],
         color = d3.scale.threshold()
             .domain(color_domain)
-            .range(["#adfcad", "#ffcb40", "#ffba00", "#ff7d73", "#ff4e40", "#ff1300"]);
+            .range([
+                '#ffffe0','#f6fed9','#edfcd1','#e4f9cb','#dcf6c3','#d5f4be','#cef2b8','#c7efb2','#c1ebad','#bbe8a7','#b5e5a2','#afe39d','#aadf99','#a4dd94','#9fd98f','#99d58a','#94d286','#90cf81','#8acc7d','#86c878','#81c574','#7cc270','#78bf6b','#74bb68','#6fb863','#6bb55f','#67b15b','#62ad57','#5eaa54','#59a74f','#56a44c','#52a048','#4d9c44','#4a9940','#46963c','#429239','#3e9036','#398c31','#36882e','#32862b','#2e8126','#2a7e23','#267b1f','#21781b','#1d7517','#197113','#136d0e','#0d6b09','#076705','#006400'
+               ]);
 
-    var data = {
+    var unparsed = {
         po_starosti_pojedinacno: null,
         po_starosti_petogodisnje: null,
         po_nacionalnosti: null,
@@ -151,16 +159,99 @@ window.addEventListener('load', function(){
 
     var colorAll = function(){
         var inverted = projection.invert([-180,180]);
+
+        var set = data[currentSet],
+            selected = [],
+            max = min = 0;
+           
+        
         features.forEach(function(element){
                 //color(100)
-            console.log(element.properties['name:bs']);
-            //c.fillStyle = "rgba(0, 102, 153, 0.4)", c.beginPath(), path(element.geometry), c.fill();
-            var pat=c.createPattern(document.querySelector('#shade'),"repeat");
-            //c.rect(0,0,150,100);
+            //console.log(element.properties['name:bs']);
+            set.groups.forEach(function(group){
+                var sim = similarity(group.name, element.properties['name:bs']);
+                
+                if(sim >= 0.7){
+                    
+                    selected.push({ element: element, group: group })
+                    
+                }
+            });
+
+            
+            
+            
+            /*var pat=c.createPattern(document.querySelector('#shade'),"repeat");
+           
             path(element.geometry)
             c.fillStyle=pat;
-            c.fill()
+            c.fill()*/
         })
+
+        
+       
+        selected.forEach(function(sel, i ){
+            
+                set = sel.group;
+                element = sel.element;
+                
+                if(set.pol == 'Ukupno'){
+                    max = set.total;
+
+                     console.log(set)
+                    var painting = color(max);
+                    c.fillStyle = painting, c.beginPath(), path(element.geometry), c.fill();
+                }
+           
+        })
+        /*
+            var painting = color(max);
+            
+
+            console.log(selected)
+            c.fillStyle = painting, c.beginPath(), path(element.geometry), c.fill();
+
+        */
+    }
+    //https://stackoverflow.com/questions/10473745/compare-strings-javascript-return-of-likely
+    function similarity(s1, s2) {
+        var longer = s1;
+        var shorter = s2;
+        if (s1.length < s2.length) {
+            longer = s2;
+            shorter = s1;
+        }
+        var longerLength = longer.length;
+        if (longerLength == 0) {
+            return 1.0;
+        }
+        return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
+    }
+    function editDistance(s1, s2) {
+      s1 = s1.toLowerCase();
+      s2 = s2.toLowerCase();
+
+      var costs = new Array();
+      for (var i = 0; i <= s1.length; i++) {
+        var lastValue = i;
+        for (var j = 0; j <= s2.length; j++) {
+          if (i == 0)
+            costs[j] = j;
+          else {
+            if (j > 0) {
+              var newValue = costs[j - 1];
+              if (s1.charAt(i - 1) != s2.charAt(j - 1))
+                newValue = Math.min(Math.min(newValue, lastValue),
+                  costs[j]) + 1;
+              costs[j - 1] = lastValue;
+              lastValue = newValue;
+            }
+          }
+        }
+        if (i > 0)
+          costs[s2.length] = lastValue;
+      }
+      return costs[s2.length];
     }
 
     var detectCountry = function(inverted){
@@ -214,7 +305,7 @@ window.addEventListener('load', function(){
             if(lastCountryName != country.name){
 
                 // incomplete polygons so this is disabled
-                c.fillStyle = "rgba(0, 102, 153, 0.4)", c.beginPath(), path(country.geometry), c.fill();
+                //c.fillStyle = "rgba(0, 102, 153, 0.4)", c.beginPath(), path(country.geometry), c.fill();
 
                 // country text
                 c.fillStyle = 'rgba(66, 66, 66, 0.8)', c.beginPath(), c.fillRect(x -1, y -10, ((decodeURI(country.name)).toUpperCase().length * 9.5), 14);
@@ -228,7 +319,7 @@ window.addEventListener('load', function(){
         }   
     }, false);
 
-    var createDataSet = function(raw){
+    var createDataSet = function(raw, datasetName){
         var dataset = {
             name: null,
             sets: [],
@@ -244,7 +335,7 @@ window.addEventListener('load', function(){
                 if(column.length && isNaN(column) && !dataset.name){
                     nameIndex = i;
                     dataset.name = column;
-                    sets.push({ dataset: dataset.name, sets: [] });
+                    sets.push({ dataset: dataset.name, name: datasetName, sets: [] });
                     continue;
                 }
             };
@@ -344,7 +435,7 @@ window.addEventListener('load', function(){
 
         // excluded fields doesn't comply to current 
         // algorhitmic matching so i excluded them
-        data = {
+        var unparsed = {
             //po_starosti_pojedinacno: sve.po_starosti_pojedinacno,
             po_starosti_petogodisnje: sve.po_starosti_petogodisnje,
             po_nacionalnosti: sve.po_nacionalnosti,
@@ -366,10 +457,10 @@ window.addEventListener('load', function(){
 
         var parsed = {};
 
-        for(var i in data){
-            var category = data[i];
+        for(var i in unparsed){
+            var category = unparsed[i];
 
-            parsed[i] = createDataSet(category);
+            parsed[i] = createDataSet(category, i);
         }
 
         window.topo = topo;
@@ -428,9 +519,9 @@ window.addEventListener('load', function(){
         setSelector.style.cssText = 'float: left; max-width: 150px;';
         setSelector.onchange = function(e){
             
-           /* currentLevel = parseInt(e.target.value);
-
-            if(currentLevel == 0)
+            currentSet = e.target.value;
+           
+            /*if(currentLevel == 0)
                 features = topo.bosnia;
 
             if(currentLevel == 1) 
@@ -443,7 +534,7 @@ window.addEventListener('load', function(){
                 features = topo.administrative;
             }*/
 
-            //draw();
+            draw();
         };
 
         document.body.appendChild(setSelector);
@@ -451,7 +542,7 @@ window.addEventListener('load', function(){
         for(var i in sets){
             var option = document.createElement('option');
             option.text = sets[i].dataset.split(' / ')[0];
-            option.value = sets[i].dataset.split(' / ')[0];
+            option.value = sets[i].name;
 
             setSelector.appendChild(option);
         }
