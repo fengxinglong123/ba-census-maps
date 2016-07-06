@@ -54,15 +54,10 @@ window.addEventListener('load', function(){
         moved = true,
         currentLevel = 0,
         currentSet = 'po_starosti_petogodisnje',
-        sets = [];
+        sets = [],
+        shadedRegions = [];
 
-    var color_domain = [50, 200, 500, 5000, 20000, 
-                        50000, 60000, 70000, 90000, 
-                        100000, 300000, 600000, 700000,
-                        800000, 1200000, 1500000, 1900000,
-                        2000000, 2300000, 2500000, 2900000,
-                        3100000, 3500000, 3900000, 4100000 ],
-        ext_color_domain = [0, 50, 150, 350, 750, 1500],
+    var color_domain = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
         //legend_labels = ["< 50", "50+", "150+", "350+", "750+", "> 1500"],
         color = d3.scale.threshold()
             .domain(color_domain)
@@ -127,7 +122,7 @@ window.addEventListener('load', function(){
         c.restore();
 
         c.strokeStyle = "#333", c.lineWidth = .5, c.beginPath(), path.context(c)(graticule()), c.stroke();
-
+        console.log('[i] currentLevel ' + currentLevel);
         // borders
         if(currentLevel == 0){
             c.strokeStyle = "#006699", c.lineWidth =1.5, c.beginPath(), path(borders), c.stroke();
@@ -136,7 +131,7 @@ window.addEventListener('load', function(){
 
         if(currentLevel == 1){
             c.strokeStyle = "#0077aa", c.lineWidth = 1.2, c.beginPath(), path(entitiesBorders), c.stroke();
-            colorAll();
+            
         }
         
         if(currentLevel == 2){
@@ -154,7 +149,38 @@ window.addEventListener('load', function(){
             //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(borders), c.stroke();
             //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(administrativeBorders), c.stroke();
         }
+        colorAll();
+    }
 
+    var replaceNonAscii = function(string){
+        var nonascii = { š: 's', Š: 'S', đ: 'dj', Đ: 'Dj', ć: 'c', Ć: 'C', č: 'c',  Č: 'C', ž: 'z', Ž: 'Z', 
+                        opština: '', općina: '', Opština: '', Općina: '', kanton: '', entitet: '',
+                        Kanton: '', Entitet: '', '-': ' ', rs: '', bih: '', '\\': ' ', '/': ' ', zupanija: '', 'županija': '' };
+
+        string = string ? string : '';
+        string = string.toLowerCase();
+
+        var any = [];
+
+        for(var i in nonascii){
+
+            string = string.replace(i, nonascii[i]);
+            any.push( (i + '').toLowerCase() );
+
+        }
+
+        string = string.trim();
+
+        var check = any.filter(function(f){
+            if(string.indexOf(f) > -1)
+                return f;
+        })
+
+        if(check.length)
+            replaceNonAscii(string);
+        else {
+            return string.toLowerCase();
+        }
     }
 
     var colorAll = function(){
@@ -167,14 +193,48 @@ window.addEventListener('load', function(){
         
         features.forEach(function(element){
                 //color(100)
-            //console.log(element.properties['name:bs']);
+            
             set.groups.forEach(function(group){
-                var sim = similarity(group.name, element.properties['name:bs']);
+
+                var e = element.properties['name:bs'] ? element.properties['name:bs'] : element.properties['name'];
+
+                var groupname = replaceNonAscii(group.name);
+                var elementname = replaceNonAscii(e);
                 
-                if(sim >= 0.7){
-                    
-                    selected.push({ element: element, group: group })
-                    
+                if( groupname && elementname ){
+                     
+                        
+
+                        var highestsim = similarity(groupname, elementname),
+                            simfactor = currentLevel == 1 || currentLevel == 2 ? 1 : 0.7;
+
+                        
+                        /*for(var k in element.properties){
+
+                            if(!isNaN(element.properties[k]))
+                                continue;
+
+                            var prop = element.properties[k],
+                                sim = similarity(groupname, replaceNonAscii(prop));
+
+                            if(sim > highestsim)
+                                highestsim = sim;
+                        }*/
+                        
+
+                       
+                        
+                        if(highestsim >= simfactor){
+                            var already = selected.filter(function(sel){
+                                return sel.element.id == element.id;
+                            });
+
+
+                            if(!already.length)
+                                selected.push({ element: element, group: group })
+                            
+                        }
+                
                 }
             });
 
@@ -189,19 +249,62 @@ window.addEventListener('load', function(){
         })
 
         
-       
+        var shaders = [document.querySelector('#shade-white'), document.querySelector('#shade-red'),
+                    document.querySelector('#shade-blue'), document.querySelector('#shade-green')];
+
+        console.log('[i] should colorize.');
+        //console.log(selected);
+
+        selected.forEach(function(sel, i ){
+            set = sel.group;
+            if(set.pol == 'Ukupno'){
+
+                //if(parseInt(set.total) > max)
+                    max += parseInt(set.total);
+            }
+
+        });
+
+        console.log(max);
+
         selected.forEach(function(sel, i ){
             
                 set = sel.group;
                 element = sel.element;
                 
-                if(set.pol == 'Ukupno'){
-                    max = set.total;
+                //if(shadedRegions.indexOf(set.name) == -1){
+                    //shadedRegions.push(set.name);
+                    //console.log(set.name);
+                    if(set.pol == 'Ukupno'){
+                        
 
-                     console.log(set)
-                    var painting = color(max);
-                    c.fillStyle = painting, c.beginPath(), path(element.geometry), c.fill();
-                }
+                        //console.log(max, set.name) // OVDE SU REALNE STATISTIKE
+                        // console.log(set)
+                        var alpha = (set.total * 100) / max;
+                        var painting = color(alpha);
+                        console.log(alpha, set.name, set.total, element);
+                        c.fillStyle = painting, c.beginPath(), path(element.geometry), c.fill();
+                       /*for(j in set.per_set){
+
+                            var cat = set.per_set[j],
+                                alpha = ((cat * 100) / max) / 100,
+                                shader = shaders[Math.floor(Math.random() * shaders.length)]
+
+                            var pat = c.createPattern(shader, "repeat");
+               
+                            path(element.geometry)
+                           
+
+                            c.fillStyle = pat;
+                            c.globalAlpha = alpha;
+                            c.fill();
+                       }*/
+                       
+                    }
+
+                //}
+                
+                    
            
         })
         /*
@@ -214,45 +317,77 @@ window.addEventListener('load', function(){
         */
     }
     //https://stackoverflow.com/questions/10473745/compare-strings-javascript-return-of-likely
-    function similarity(s1, s2) {
-        var longer = s1;
-        var shorter = s2;
-        if (s1.length < s2.length) {
-            longer = s2;
-            shorter = s1;
-        }
-        var longerLength = longer.length;
-        if (longerLength == 0) {
-            return 1.0;
-        }
-        return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
-    }
-    function editDistance(s1, s2) {
-      s1 = s1.toLowerCase();
-      s2 = s2.toLowerCase();
+    var similarity = function(s1, s2) {
+  var m = 0;
 
-      var costs = new Array();
-      for (var i = 0; i <= s1.length; i++) {
-        var lastValue = i;
-        for (var j = 0; j <= s2.length; j++) {
-          if (i == 0)
-            costs[j] = j;
-          else {
-            if (j > 0) {
-              var newValue = costs[j - 1];
-              if (s1.charAt(i - 1) != s2.charAt(j - 1))
-                newValue = Math.min(Math.min(newValue, lastValue),
-                  costs[j]) + 1;
-              costs[j - 1] = lastValue;
-              lastValue = newValue;
-            }
-          }
-        }
-        if (i > 0)
-          costs[s2.length] = lastValue;
+  // Exit early if either are empty.
+  if ( s1.length === 0 || s2.length === 0 ) {
+    return 0;
+  }
+
+  // Exit early if they're an exact match.
+  if ( s1 === s2 ) {
+    return 1;
+  }
+  //s1 = (s1 + '').toLowerCase();
+  //s2 = (s2 + '').toLowerCase();
+
+  var range     = (Math.floor(Math.max(s1.length, s2.length) / 2)) - 1,
+      s1Matches = new Array(s1.length),
+      s2Matches = new Array(s2.length);
+
+  for ( i = 0; i < s1.length; i++ ) {
+    var low  = (i >= range) ? i - range : 0,
+        high = (i + range <= s2.length) ? (i + range) : (s2.length - 1);
+
+    for ( j = low; j <= high; j++ ) {
+      if ( s1Matches[i] !== true && s2Matches[j] !== true && s1[i] === s2[j] ) {
+        ++m;
+        s1Matches[i] = s2Matches[j] = true;
+        break;
       }
-      return costs[s2.length];
     }
+  }
+
+  // Exit early if no matches were found.
+  if ( m === 0 ) {
+    return 0;
+  }
+
+  // Count the transpositions.
+  var k = n_trans = 0;
+
+  for ( i = 0; i < s1.length; i++ ) {
+    if ( s1Matches[i] === true ) {
+      for ( j = k; j < s2.length; j++ ) {
+        if ( s2Matches[j] === true ) {
+          k = j + 1;
+          break;
+        }
+      }
+
+      if ( s1[i] !== s2[j] ) {
+        ++n_trans;
+      }
+    }
+  }
+
+  var weight = (m / s1.length + m / s2.length + (m - (n_trans / 2)) / m) / 3,
+      l      = 0,
+      p      = 0.1;
+
+  if ( weight > 0.7 ) {
+    while ( s1[l] === s2[l] && l < 4 ) {
+      ++l;
+    }
+
+    weight = weight + l * p * (1 - weight);
+  }
+
+  return weight;
+};
+
+    window.similarity = similarity;
 
     var detectCountry = function(inverted){
        
