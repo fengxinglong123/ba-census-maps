@@ -94,18 +94,18 @@ var page = (function(){
         
         topo = {
             meshed: {
-                bosnia: topojson.mesh(bosnia, bosnia.objects.collection),
-                entities: topojson.mesh(entities, entities.objects.admin_level_4),
-                cantons: topojson.mesh(cantons, cantons.objects.admin_level_5),
-                administrative: topojson.mesh(administrative, administrative.objects.administrative_ba)
+                bosnia: topojson.mesh(bosnia, bosnia.objects.BIH_adm0),
+                entities: topojson.mesh(entities, entities.objects.BIH_adm1),
+                cantons: topojson.mesh(cantons, cantons.objects.BIH_adm2),
+                administrative: topojson.mesh(administrative, administrative.objects.BIH_adm3)
                 //features: topojson.feature(bosnia, bosnia.objects.collection).features
             },
 
             featured: {
-                bosnia: topojson.feature(bosnia, bosnia.objects.collection).features,
-                entities: topojson.feature(entities, entities.objects.admin_level_4).features,
-                cantons: topojson.feature(cantons, cantons.objects.admin_level_5).features,
-                administrative: topojson.feature(administrative, administrative.objects.administrative_ba).features
+                bosnia: topojson.feature(bosnia, bosnia.objects.BIH_adm0).features,
+                entities: topojson.feature(entities, entities.objects.BIH_adm1).features,
+                cantons: topojson.feature(cantons, cantons.objects.BIH_adm2).features,
+                administrative: topojson.feature(administrative, administrative.objects.BIH_adm3).features
             },
             
             raw: {
@@ -213,10 +213,10 @@ var page = (function(){
 
         // load datasets
         queue()
-            .defer(d3.json, "/bosnia-and-herzegovina/bosnia.topojson")
-            .defer(d3.json, "/bosnia-and-herzegovina/admin_level_4_entities.topojson")
-            .defer(d3.json, "/bosnia-and-herzegovina/admin_level_5_kantoni.topojson")
-            .defer(d3.json, "/bosnia-and-herzegovina/administrative_ba.topojson")
+            .defer(d3.json, "/bosnia-and-herzegovina/BIH_adm0.topojson")
+            .defer(d3.json, "/bosnia-and-herzegovina/BIH_adm1.topojson")
+            .defer(d3.json, "/bosnia-and-herzegovina/BIH_adm2.topojson")
+            .defer(d3.json, "/bosnia-and-herzegovina/BIH_adm3.topojson")
             .defer(d3.json, "/sve")
             .await(loadDataSets);
     };
@@ -239,7 +239,9 @@ var page = (function(){
                 //c.restore();
             }
             // mouse over territory
-            if(country && country.name){
+
+            if(country && country.name){ 
+                  
                 if(lastCountryName != country.name){
 
                     // incomplete polygons so this is disabled
@@ -272,6 +274,7 @@ var page = (function(){
 
 
             if(element.geometry.type == 'Polygon'){
+
                 if(gju.pointInPolygon(inverted, element.geometry) && !foundCountryElement){
                     foundCountryElement = element;
                 }
@@ -283,9 +286,9 @@ var page = (function(){
                 }
             }
         })
-        
        
-        var name = foundCountryElement? foundCountryElement.properties.name: null,
+        
+        var name = foundCountryElement? foundCountryElement.properties['NAME_' + currentLevel]: null,
             geometry = foundCountryElement? foundCountryElement.geometry: null;
 
         return {
@@ -303,50 +306,126 @@ var page = (function(){
 
         
             
-        
+        /*currentFeatures.forEach(function(element){
 
+            if(currentLevel > 1 && element.properties['NAME_1'] == 'Repuplika Srpska' || element.properties['NAME_1'] == 'Brčko' )
+                e = element.properties['NAME_' + currentLevel];
+            else    
+                e = currentLevel > 1 ? element.properties['VARNAME_' + currentLevel] : element.properties['NAME_' + currentLevel]
+            
+
+            console.log(e);
+            console.log(element.properties)
+            
+        })*/
         set.groups.forEach(function(group){
+            var rnd = Math.random().toString(36).substring(3);
             currentFeatures.forEach(function(element){
+                var e = element.properties['NAME_' + currentLevel], 
+                    groupname = group.name,
+                    pass = false,
+                    param;
+                    
+                if(currentLevel == 1){
+                    var possible = ['federacija bosne i hercegovine', 'republika srpska', 'brčko'];
+                    if(possible.indexOf(groupname.toLowerCase()) == -1)
+                        return;
 
-                var e = element.properties['name:bs'];
+                    param = 'NAME_' + currentLevel;
+                    pass = true;
+                }
+
+                if(currentLevel == 2){
+                    if(groupname.indexOf('kanton') > -1)
+                        return;
+
+                     param = 'VARNAME_' + currentLevel;
+                    e = element.properties['VARNAME_' + currentLevel];
+
+                    pass = true;
+                }
+
+                if(currentLevel == 3){
+                    if(groupname.indexOf('kanton') > -1)
+                        return;
+
+                    param = 'VARNAME_' + currentLevel;
+                    e = element.properties['VARNAME_' + currentLevel];
+
+                    pass = true;
+                }
+                /*
+                if(pass){
+                    if(loading && (selectedLoadCount == 0)){
+                        loading = false;
+                        c2.clearRect(width - 100, height - 20, (('Loading ...').toUpperCase().length * 9.5), 14); 
+                    }
+
+                    selected.push({ element: element, group: group, id: element.properties['HASC_1'] })
+                    
+                    
+                }*/
+
+                
+
+                /*var e;
+                if(currentLevel > 1 && element.properties['NAME_1'] == 'Repuplika Srpska' || element.properties['NAME_1'] == 'Brčko' )
+                    e = element.properties['NAME_' + currentLevel];
+                else    
+                    e = currentLevel > 1 ? element.properties['VARNAME_' + currentLevel] : element.properties['NAME_' + currentLevel]*/
                 
 
                 var groupname = group.name;
-                var elementname = e;
+                var elementname = element.properties[param];
                 
-                //if(groupname != un && elementname){
-                     
-                    parser.similarity(group.name, e, function(weight, s1, s2){
-                        simfactor =  currentLevel == 1 || currentLevel == 2 ? 1: 0.77;
-                        
-                        if(loading && (selectedLoadCount == 0)){
-                            loading = false;
-                            c2.clearRect(width - 100, height - 20, (('Loading ...').toUpperCase().length * 9.5), 14); 
-                        }
-                        
-                        if(weight >= simfactor){
+                //if(!pass)
+                    //return;
 
-                            group.name = s1 + ' ' + s2;
-                            selected.push({ element: element, group: group })
-                        }
+                parser.similarity(group.name, e, function(weight, s1, s2){
+                    simfactor = 0.95; //currentLevel == 1 || currentLevel == 2 ? 1: 0.77;
+                    
+                    //console.log(weight, s1, s2);
 
-                        selectedLoadCount--;
-                    });
-                //}
+                    if(loading && (selectedLoadCount == 0)){
+                        loading = false;
+                        c2.clearRect(width - 100, height - 20, (('Loading ...').toUpperCase().length * 9.5), 14); 
+                    }
+                    
+                    if(weight >= simfactor){
+                        //var already = selected.filter(function(sel){
+                         //   return sel.element['ID_' + currentLevel] == element['ID_' + currentLevel];
+                        //});
+
+
+                        //if(!already.length){
+                          //console.log(element);
+                            selected.push({ element: element, group: group, id: rnd })
+                        //}
+                    }
+
+                    selectedLoadCount--;
+                });
+                
             });
         });
 
-        var giveUpAfter = 10000;
-
+        var giveUpAfter = 10;
+        console.log('enter the dragon')
         var continueInterval = setInterval(function(){
 
             if(selected.length){
+
                 clearInterval(continueInterval);
                 
                 // remove duplicates
-                selected = selected.filter(function(item, pos, array){
-                    return selected.map(function(mapItem){ return mapItem.element.id; }).indexOf(item.element.id) === pos;
-                });
+                /*var n = selected.filter(function(item, pos, array){
+                    return selected.map(function(mapItem){ return mapItem.id; }).indexOf(item.id) === pos;
+                });*/
+
+                //selected = n;
+
+                //debugger;
+                //console.log(olddd)
 
                 selectedLoadCount = selected.length -1;
 
@@ -354,20 +433,21 @@ var page = (function(){
                 selected.forEach(function(sel, i ){
                     set = sel.group;
                     if(set.pol == 'Ukupno'){
+                        // set max according to set's maximum not total maximum
                         max += parseInt(set.total);
                     }
                 });
                 // 109 optina
                 //max /= 1000;
 
-                console.log(max, selected.length);
+                //console.log(max, selected.length);
                 // render 
                 selected.forEach(function(sel, i ){
                     set = sel.group;
                     element = sel.element;  
                     if(set.pol == 'Ukupno'){
                         set.total = parseInt(set.total);
-                        //console.log(max, set.total, set.name) // OVDE SU REALNE STATISTIKE        
+                        console.log(max, set.total, set.name, sel) // OVDE SU REALNE STATISTIKE        
                         var alpha = (set.total * 100) / max,
                             painting = color(alpha);
 

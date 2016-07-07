@@ -99,8 +99,12 @@ var parser = (function(){
         string = string.trim();
         string = string ? string : '';
         // /string = string.();
-        var splited = string.split('/')[1]
-        string = splited ? splited[1] ? splited[1]: splited[0] : string;
+        var splited = string.split('|');
+
+        if( Object.prototype.toString.call( splited ) === '[object Array]' ) {
+            string = splited[0];
+        }
+        //string = splited ? splited[1] ? splited[1]: splited[0] : string;
         var any = [];
 
         string = string.toUpperCase();
@@ -138,7 +142,7 @@ var parser = (function(){
     	s1 = replaceNonAscii(s1);
     	s2 = replaceNonAscii(s2);
     	
-    	var giveUpAfter = 10000;
+    	var giveUpAfter = 1000;
 
     	var continueInterval = setInterval(function(){
 
@@ -146,7 +150,7 @@ var parser = (function(){
     			
     			next(getWeight(s1, s2), s1, s2);
     			clearInterval(continueInterval);
-    		}
+    		} 
 
     		if(giveUpAfter == 0){
     			console.log('[i] gave up, matching strings are empty or something is wrong.');

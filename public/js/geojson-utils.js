@@ -51,7 +51,7 @@
 
   gju.pointInPolygon = function (p, poly) {
     var coords = (poly.type == "Polygon") ? [ poly.coordinates ] : poly.coordinates
-
+    
     var insideBox = false
     for (var i = 0; i < coords.length; i++) {
       if (gju.pointInBoundingBox(p, boundingBoxAroundPolyCoords(coords[i]))) insideBox = true
