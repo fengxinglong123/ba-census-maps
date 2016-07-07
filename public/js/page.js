@@ -201,56 +201,7 @@ var page = (function(){
         color = d3.scale.threshold()
             .domain(color_domain)
             .range([
-                '#ffffe0',
-                '#f6fed9',
-                '#edfcd1',
-                '#e4f9cb',
-                '#dcf6c3',
-                '#d5f4be',
-                '#cef2b8',
-                '#c7efb2',
-                '#c1ebad',
-                '#bbe8a7',
-                '#b5e5a2',
-                '#afe39d',
-                '#aadf99',
-                '#a4dd94',
-                '#9fd98f',
-                '#99d58a',
-                '#94d286',
-                '#90cf81',
-                '#8acc7d',
-                '#86c878',
-                '#81c574',
-                '#7cc270',
-                '#78bf6b',
-                '#74bb68',
-                '#6fb863',
-                '#6bb55f',
-                '#67b15b',
-                '#62ad57',
-                '#5eaa54',
-                '#59a74f',
-                '#56a44c',
-                '#52a048',
-                '#4d9c44',
-                '#4a9940',
-                '#46963c',
-                '#429239',
-                '#3e9036',
-                '#398c31',
-                '#36882e',
-                '#32862b',
-                '#2e8126',
-                '#2a7e23',
-                '#267b1f',
-                '#21781b',
-                '#1d7517',
-                '#197113',
-                '#136d0e',
-                '#0d6b09',
-                '#076705',
-                '#006400'
+                '#ffffe0','#f0fdd4','#e1fbc9','#d2f9be','#c2f6b2','#b2f4a7','#a2f19b','#90ee90','#81dd8e','#72cd8c','#62bd8a','#52ad88','#409e86','#2a8f83','#008080'
                ]);
 
         topo = {
@@ -366,7 +317,7 @@ var page = (function(){
                 //if(groupname != un && elementname){
                      
                     parser.similarity(group.name, e, function(weight, s1, s2){
-                        simfactor =  currentLevel == 1 || currentLevel == 2 ? 1: 0.7;
+                        simfactor =  currentLevel == 1 || currentLevel == 2 ? 1: 0.77;
                         
                         if(loading && (selectedLoadCount == 0)){
                             loading = false;
@@ -406,15 +357,17 @@ var page = (function(){
                         max += parseInt(set.total);
                     }
                 });
+                // 109 optina
+                //max /= 1000;
 
-                //console.log(max);
+                console.log(max, selected.length);
                 // render 
                 selected.forEach(function(sel, i ){
                     set = sel.group;
                     element = sel.element;  
                     if(set.pol == 'Ukupno'){
                         set.total = parseInt(set.total);
-                        console.log(max, set.total, set.name) // OVDE SU REALNE STATISTIKE        
+                        //console.log(max, set.total, set.name) // OVDE SU REALNE STATISTIKE        
                         var alpha = (set.total * 100) / max,
                             painting = color(alpha);
 
