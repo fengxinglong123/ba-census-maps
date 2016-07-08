@@ -4,6 +4,7 @@ var width = 950,
     c, 
     c2,
     projection,
+    canvas,
     path,
     graticule,
     elem,
@@ -30,7 +31,15 @@ var width = 950,
     parsed,
     topo,
     loading,
-    selectedLoadCount = 0;
+    selectedLoadCount = 0,
+    zoom,
+    last_position = {
+        x: undefined,
+        y: undefined
+    },
+    scale = 1,
+    wheeling = false,
+    dragging = false;
 
 window.addEventListener('load', function(){
 
