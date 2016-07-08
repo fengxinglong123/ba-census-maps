@@ -201,7 +201,7 @@ var page = (function(){
         color = d3.scale.threshold()
             .domain(color_domain)
             .range([
-                '#ffffe0','#f0fdd4','#e1fbc9','#d2f9be','#c2f6b2','#b2f4a7','#a2f19b','#90ee90','#81dd8e','#72cd8c','#62bd8a','#52ad88','#409e86','#2a8f83','#008080'
+                 '#ffffe0','#f7fc94','#e7f87e','#d7f273','#c9ec6b','#bbe666','#ace061','#a0d95d','#92d258','#86cc54','#7bc650','#70be4b','#65b745','#5ab13f','#4faa39','#44a333','#3a9c2b','#2f9523','#238d1a','#14870e','#008000'
                ]);
 
         topo = {
@@ -304,20 +304,6 @@ var page = (function(){
             selected = [],
             max = min = 0;
 
-        
-            
-        /*currentFeatures.forEach(function(element){
-
-            if(currentLevel > 1 && element.properties['NAME_1'] == 'Repuplika Srpska' || element.properties['NAME_1'] == 'Brčko' )
-                e = element.properties['NAME_' + currentLevel];
-            else    
-                e = currentLevel > 1 ? element.properties['VARNAME_' + currentLevel] : element.properties['NAME_' + currentLevel]
-            
-
-            console.log(e);
-            console.log(element.properties)
-            
-        })*/
         set.groups.forEach(function(group){
             var rnd = Math.random().toString(36).substring(3);
             currentFeatures.forEach(function(element){
@@ -336,71 +322,205 @@ var page = (function(){
                 }
 
                 if(currentLevel == 2){
-                    if(groupname.indexOf('kanton') > -1)
-                        return;
+                    
+                    if(element.properties['NAME_1'].indexOf('Federacija') > -1){
+                        if(element.properties['ENGTYPE_2'] == 'Canton'){
+                            param = 'VARNAME_2';
+                            pass = true;
 
-                     param = 'VARNAME_' + currentLevel;
-                    e = element.properties['VARNAME_' + currentLevel];
+                            if(element.properties[param] == 'Foča'){
+                                element.properties[param] = 'FOCA - FBIH';
+                            }
 
-                    pass = true;
+                            if(element.properties[param].indexOf('ercegbos') > -1){
+                                element.properties[param] = 'KANTON 10';
+                            }
+
+                            if(element.properties[param].indexOf('arajev') > -1 && groupname.indexOf('KANTON SARAJEVO') > -1 ){
+                                element.properties[param] = 'KANTON SARAJEVO';
+                            }
+
+                            if(groupname.indexOf('NOVO SARAJEVO') > -1){
+                                pass = false;
+                            }
+                        }
+                    }
+
+                    if(element.properties['NAME_1'].indexOf('Srpska') > -1){
+                        if(element.properties['ENGTYPE_2'] == 'Canton'){
+                            param = 'NAME_2';
+                            pass = false; // no regional data for srpska 
+
+                            if(element.properties[param] == 'Foča'){
+                                element.properties[param] = 'FOCA - RS';
+                            }
+                        }
+                    }
+
+                    if(element.properties['NAME_1'].indexOf('Brčko') > -1){
+                        
+                        param = 'NAME_2';
+                        pass = true;
+                    }
                 }
 
                 if(currentLevel == 3){
                     if(groupname.indexOf('kanton') > -1)
                         return;
 
-                    param = 'VARNAME_' + currentLevel;
-                    e = element.properties['VARNAME_' + currentLevel];
+                    if(element.properties['ENGTYPE_' + currentLevel] == 'Commune'){
+                        param = 'VARNAME_' + currentLevel;
 
-                    pass = true;
+                        if(element.properties[param]){
+                            pass = true;
+                            
+                        }
+                        else {
+                            param = 'NAME_' + currentLevel;
+                            pass = true;
+                        }
+                            
+                        if(element.properties['NAME_1'].indexOf('Federacija') > -1){
+                            if(element.properties[param].indexOf('Mostar') > -1 && groupname.indexOf('MOSTAR') > -1){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Ustikolina') > -1 && groupname.indexOf('FOČA - FBiH') > -1){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Pale') > -1 && groupname.indexOf('PALE - FBiH') > -1){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Ilidža') > -1 && groupname.indexOf('ILID') > -1 && groupname.indexOf('ISTOČNA') == -1){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Trnovo') > -1 && groupname.indexOf('TRNOVO - FBiH') > -1 ){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Goražde') > -1 && groupname == 'GORAŽDE' ){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Prozor') > -1 && groupname.indexOf('PROZOR') > -1 ){
+                                
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Kupres') > -1 && groupname.indexOf('KUPRES - FBiH') > -1 ){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Drvar') > -1 && groupname.indexOf('DRVAR') > -1 ){
+                                
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Usora') > -1 && groupname.indexOf('USORA') > -1 ){
+                                element.properties[param] = groupname = 'Tešanj / Usora';
+                            }
+
+                            if(element.properties[param].indexOf('Doboj South') > -1 && groupname.indexOf('DOBOJ-JUG') > -1 ){
+                                element.properties[param] = groupname = 'DOBOJ-JUG';
+                            }
+
+                            if(element.properties[param].indexOf('Doboj East') > -1 && groupname.indexOf('DOBOJ-JUG') > -1 ){
+                                element.properties[param] = groupname = 'DOBOJ-ISTOK';
+                            }
+                        }
+
+                        if(element.properties['NAME_1'].indexOf('Srpska') > -1){
+                            if(element.properties[param].indexOf('Mostar') > -1 && groupname.indexOf('ISTOČNI MOSTAR') > -1){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Srbinje') > -1 && groupname.indexOf('FOČA - RS') > -1){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Pale') > -1 && groupname.indexOf('PALE - RS') > -1){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Ilidža') > -1 && groupname.indexOf('ILID') > -1 && groupname.indexOf('ISTOČNA') > -1){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Trnovo') > -1 && groupname.indexOf('TRNOVO - RS') > -1 ){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Čajniče') > -1 && groupname.indexOf('ČAJNIČE') > -1 ){
+                                element.properties[param] = groupname = 'ČAJNIČE';
+                            }
+
+                            if(element.properties[param].indexOf('Goražde') > -1 && groupname.indexOf('NOVO GORAŽDE') > -1 ){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Kupres') > -1 && groupname.indexOf('KUPRES - RS') > -1 ){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Srpski Ključ') > -1 && groupname.indexOf('RIBNIK') > -1 ){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Srpski Drvar') > -1 && groupname.indexOf('DRVAR') > -1 ){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Kneževo') > -1 && groupname.indexOf('KNEŽEVO') > -1 ){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Srpsko Orašje') > -1 && groupname.indexOf('ŽABAR') > -1 ){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Brod') > -1 && groupname.indexOf('BROD') > -1 ){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Gradiška') > -1 && groupname.indexOf('GRADIŠKA') > -1 ){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Dubica') > -1 && groupname.indexOf('DUBICA') > -1 ){
+                                element.properties[param] = groupname;
+                            }
+
+                            if(element.properties[param].indexOf('Kostajnica') > -1 && groupname.indexOf('KOSTAJNICA') > -1 ){
+                                element.properties[param] = groupname;
+                            }
+                        }
+                    }
                 }
-                /*
-                if(pass){
+               
+                e = element.properties[param];
+
+                var splited = e.split('|');
+
+                if( Object.prototype.toString.call( splited ) === '[object Array]' ) {
+                    e = splited[1] ? splited[1] : splited[0];
+                }
+                
+                if(!pass)
+                    return;
+
+                parser.similarity(groupname, e, function(weight, s1, s2){
+                    simfactor = 0.95;
+
                     if(loading && (selectedLoadCount == 0)){
                         loading = false;
                         c2.clearRect(width - 100, height - 20, (('Loading ...').toUpperCase().length * 9.5), 14); 
                     }
 
-                    selected.push({ element: element, group: group, id: element.properties['HASC_1'] })
-                    
-                    
-                }*/
-
-                
-
-                /*var e;
-                if(currentLevel > 1 && element.properties['NAME_1'] == 'Repuplika Srpska' || element.properties['NAME_1'] == 'Brčko' )
-                    e = element.properties['NAME_' + currentLevel];
-                else    
-                    e = currentLevel > 1 ? element.properties['VARNAME_' + currentLevel] : element.properties['NAME_' + currentLevel]*/
-                
-
-                var groupname = group.name;
-                var elementname = element.properties[param];
-                
-                //if(!pass)
-                    //return;
-
-                parser.similarity(group.name, e, function(weight, s1, s2){
-                    simfactor = 0.95; //currentLevel == 1 || currentLevel == 2 ? 1: 0.77;
-                    
-                    //console.log(weight, s1, s2);
-
-                    if(loading && (selectedLoadCount == 0)){
-                        loading = false;
-                        c2.clearRect(width - 100, height - 20, (('Loading ...').toUpperCase().length * 9.5), 14); 
-                    }
-                    
                     if(weight >= simfactor){
-                        //var already = selected.filter(function(sel){
-                         //   return sel.element['ID_' + currentLevel] == element['ID_' + currentLevel];
-                        //});
-
-
-                        //if(!already.length){
-                          //console.log(element);
-                            selected.push({ element: element, group: group, id: rnd })
-                        //}
+                        selected.push({ element: element, group: group, id: rnd })
                     }
 
                     selectedLoadCount--;
@@ -410,7 +530,7 @@ var page = (function(){
         });
 
         var giveUpAfter = 10;
-        console.log('enter the dragon')
+
         var continueInterval = setInterval(function(){
 
             if(selected.length){
@@ -418,14 +538,11 @@ var page = (function(){
                 clearInterval(continueInterval);
                 
                 // remove duplicates
-                /*var n = selected.filter(function(item, pos, array){
+                /*var unduped = selected.filter(function(item, pos, array){
                     return selected.map(function(mapItem){ return mapItem.id; }).indexOf(item.id) === pos;
                 });*/
 
-                //selected = n;
-
-                //debugger;
-                //console.log(olddd)
+                //selected = unduped;
 
                 selectedLoadCount = selected.length -1;
 
@@ -434,23 +551,23 @@ var page = (function(){
                     set = sel.group;
                     if(set.pol == 'Ukupno'){
                         // set max according to set's maximum not total maximum
-                        max += parseInt(set.total);
+                        if(parseInt(set.total) > max){
+                            max = parseInt(set.total);
+                        }
                     }
                 });
                 // 109 optina
-                //max /= 1000;
 
-                //console.log(max, selected.length);
-                // render 
                 selected.forEach(function(sel, i ){
                     set = sel.group;
                     element = sel.element;  
                     if(set.pol == 'Ukupno'){
                         set.total = parseInt(set.total);
-                        console.log(max, set.total, set.name, sel) // OVDE SU REALNE STATISTIKE        
+                        //console.log(max, set.total, set.name, sel) // OVDE SU REALNE STATISTIKE        
                         var alpha = (set.total * 100) / max,
                             painting = color(alpha);
 
+                        console.log(alpha, set.total, painting, set.name);
                         c.fillStyle = painting, c.beginPath(), path(element.geometry), c.fill();
 
                         
@@ -486,20 +603,6 @@ var page = (function(){
             giveUpAfter--;
 
         }, 1);
-
-        
-        /*var shaders = [document.querySelector('#shade-white'), document.querySelector('#shade-red'),
-                    document.querySelector('#shade-blue'), document.querySelector('#shade-green')];*/
-
-        
-        /*
-            var painting = color(max);
-            
-
-            console.log(selected)
-            c.fillStyle = painting, c.beginPath(), path(element.geometry), c.fill();
-
-        */
     };
 
     var animate = function() {

@@ -89,37 +89,28 @@ var parser = (function(){
         return dataset;
     };
 
-    var replaceNonAscii = function(string){
-        var nonascii = { š: 's', Š: 'S', đ: 'dj', Đ: 'Dj', ć: 'c', Ć: 'C', č: 'c',  Č: 'C', ž: 'z', Ž: 'Z'/*, 
-                        opština: '', općina: '', Opština: '', Općina: '', kanton: '', entitet: '',
-                        Kanton: '', Entitet: '', '-': ' ', rs: '', bih: '', '\\': ' ', '/': ' ', zupanija: '', 'županija': '' */};
+    var replaceIrregular = function(string){
+        var nonascii = { š: 's', Š: 'S', đ: 'dj', Đ: 'Dj', ć: 'c', Ć: 'C', č: 'c',  Č: 'C', ž: 'z', Ž: 'Z'};
+        
         if(!string)
         	return '';
 
         string = string.trim();
         string = string ? string : '';
-        // /string = string.();
-        var splited = string.split('|');
 
-        if( Object.prototype.toString.call( splited ) === '[object Array]' ) {
-            string = splited[0];
-        }
-        //string = splited ? splited[1] ? splited[1]: splited[0] : string;
         var any = [];
 
         string = string.toUpperCase();
 
         for(var i in nonascii){
-        	string = string.replace(/(opština)|(općina)|(opcina)|(opstina)|(zupanija)|(županija)|(kanton)|(ex. varcar vakuf)/ig, '');
-            string = string.replace(i, nonascii[i]); // /(š)|(š)|(đ)|(Đ)|(ć)|(Ć)|(č)|(Č)|(ž)|(Ž)/ig
+            string = string.replace(/(\-.RS)/ig, 'RS');
+            string = string.replace(/(\-.FBIH)/ig, 'FBIH');
+        	string = string.replace(/(opština)|(općina)|(opcina)|(opstina)|(zupanija)|(županija)|(kanton)|(\-)|(ex. varcar vakuf)/ig, '');
+            string = string.replace(/(š)|(š)|(đ)|(Đ)|(ć)|(Ć)|(č)|(Č)|(ž)|(Ž)/ig, nonascii[i]); 
             string = string.trim();
-
-            //string = string.replace(i, nonascii[i]);
+            
             any.push( i );
-
         }
-
-        
 
         var check = any.filter(function(f){
             if(string.indexOf(f) > -1)
@@ -136,11 +127,8 @@ var parser = (function(){
 
     var similarity = function(s1, s2, next){
     	
-    	//s1 = s1.toUpperCase();
-    	//s2 = s2.toUpperCase();
-
-    	s1 = replaceNonAscii(s1);
-    	s2 = replaceNonAscii(s2);
+    	s1 = replaceIrregular(s1);
+    	s2 = replaceIrregular(s2);
     	
     	var giveUpAfter = 1000;
 
@@ -163,7 +151,6 @@ var parser = (function(){
 
     };
 
-    //https://stackoverflow.com/questions/10473745/compare-strings-javascript-return-of-likely
     var getBigrams = function(string){
 
         var s = string.toUpperCase();
@@ -200,16 +187,11 @@ var parser = (function(){
 
             return 0.0;
         }
-
-        //return 0;
     };
-
-   
-
 
     return {
     	createDataSet: createDataSet,
-    	replaceNonAscii: replaceNonAscii,
+    	replaceIrregular: replaceIrregular,
     	similarity: similarity
     }
 })();
