@@ -39,6 +39,10 @@ var page = (function(){
 
         for(var i in options){
             var option = document.createElement('option');
+            
+            if(options[i][0] == 1)
+                option.selected = true;
+
             option.text = options[i][1];
             option.value = options[i][0];
 
@@ -46,7 +50,7 @@ var page = (function(){
         }
 
         var setSelector = document.createElement('select');
-        setSelector.style.cssText = 'float: left; max-width: 150px;';
+        setSelector.style.cssText = 'float: left; max-width: 150px; display: none;';
 
         setSelector.onchange = function(e){
             
@@ -88,6 +92,9 @@ var page = (function(){
 
         c2 = document.querySelector('#textLayer').getContext("2d");
         elem = document.querySelector('#textLayer');
+
+        currentLevel = 1;
+        draw();
     };
 
     var loadDataSets = function(error, bosnia, entities, cantons, administrative, sve){
@@ -353,15 +360,20 @@ var page = (function(){
             setTimeout(function(){
                 
                 // prevent colorization 
-                
                 if(wheeling){
-                    console.log('go on', wheeling)
+
                     wheeling = false;
                     colorize();
                     
                 }
-            }, currentLevel * 100)
+            }, currentLevel * 200)
 
+            return;
+        }
+
+        if(cached[currentLevel] != undefined){
+            drawElements(cached[currentLevel]);
+            currentFeatures = cached[currentLevel];
             return;
         }
 
@@ -379,9 +391,8 @@ var page = (function(){
         }
 
         var set = parsed[currentSet],
-            selected = [],
-            max = min = 0;
-
+            selected = [];
+            
         set.groups.forEach(function(group){
             var rnd = Math.random().toString(36).substring(3);
             currentFeatures.forEach(function(element){
@@ -597,16 +608,9 @@ var page = (function(){
                 parser.similarity(groupname, e, function(weight, s1, s2){
                     simfactor = 0.95;
 
-                    if(loading && (selectedLoadCount == 0)){
-                        loading = false;
-                        c2.clearRect(5, 5, (('Loading ...').toUpperCase().length * 9.5), 14); 
-                    }
-
                     if(weight >= simfactor){
                         selected.push({ element: element, group: group, id: rnd })
                     }
-
-                    selectedLoadCount--;
                 });
                 
             });
@@ -620,64 +624,9 @@ var page = (function(){
 
                 clearInterval(continueInterval);
                 
-                // remove duplicates
-                /*var unduped = selected.filter(function(item, pos, array){
-                    return selected.map(function(mapItem){ return mapItem.id; }).indexOf(item.id) === pos;
-                });*/
-
-                //selected = unduped;
-
-                selectedLoadCount = selected.length -1;
-
-                // get maximum
-                selected.forEach(function(sel, i ){
-                    set = sel.group;
-                    if(set.pol == 'Ukupno'){
-                        // set max according to set's maximum not total maximum
-                        if(parseInt(set.total) > max){
-                            max = parseInt(set.total);
-                        }
-                    }
-                });
-                // 109 optina
-
-                selected.forEach(function(sel, i ){
-                    set = sel.group;
-                    element = sel.element;
-
-                    if(set.pol == 'Ukupno'){
-                        set.total = parseInt(set.total);
-                        //console.log(max, set.total, set.name, sel) // OVDE SU REALNE STATISTIKE        
-                        var alpha = (set.total * 100) / max,
-                            painting = color(alpha);
-
-                        //console.log(alpha, set.total, painting, set.name);
-                        c.fillStyle = painting, c.beginPath(), path(element.geometry), c.fill();
-
-                        
-                        if(loading && (selectedLoadCount == 0)){
-                            draw();
-                        }
-                        
-                        // for shaders
-                        /*for(j in set.per_set){
-
-                            var cat = set.per_set[j],
-                                alpha = ((cat * 100) / max) / 100,
-                                shader = shaders[Math.floor(Math.random() * shaders.length)]
-
-                            var pat = c.createPattern(shader, "repeat");
-
-                            path(element.geometry)
-                           
-
-                            c.fillStyle = pat;
-                            c.globalAlpha = alpha;
-                            c.fill();
-                        }*/        
-                    }
-                });
-
+                drawElements(selected);
+                
+                cached[currentLevel] = selected;
                 currentFeatures = selected;
             }
 
@@ -690,6 +639,73 @@ var page = (function(){
 
         }, 1);
     };
+
+    var drawElements = function(selected){
+        var max = min = 0;
+        // remove duplicates
+        /*var unduped = selected.filter(function(item, pos, array){
+            return selected.map(function(mapItem){ return mapItem.id; }).indexOf(item.id) === pos;
+        });*/
+
+        //selected = unduped;
+
+
+        // get maximum
+        selected.forEach(function(sel, i ){
+            set = sel.group;
+            if(set.pol == 'Ukupno'){
+                // set max according to set's maximum not total maximum
+                if(parseInt(set.total) > max){
+                    max = parseInt(set.total);
+                }
+            }
+        });
+        // 109 optina
+
+        selected.forEach(function(sel, i ){
+            set = sel.group;
+            element = sel.element;
+
+            if(set.pol == 'Ukupno'){
+                set.total = parseInt(set.total);
+                //console.log(max, set.total, set.name, sel) // OVDE SU REALNE STATISTIKE        
+                var alpha = (set.total * 100) / max,
+                    painting = color(alpha);
+
+                //console.log(alpha, set.total, painting, set.name);
+                c.fillStyle = painting, c.beginPath(), path(element.geometry), c.fill();
+
+                
+                if(loading && (selectedLoadCount == 0)){
+                    loading = false;
+                    c2.clearRect(0, 0, width, height);
+                    c2.clearRect(5, 5, (('Loading ...').toUpperCase().length * 9.5), 14); 
+                    draw();
+                }
+                
+                // for shaders
+                /*for(j in set.per_set){
+
+                    var cat = set.per_set[j],
+                        alpha = ((cat * 100) / max) / 100,
+                        shader = shaders[Math.floor(Math.random() * shaders.length)]
+
+                    var pat = c.createPattern(shader, "repeat");
+
+                    path(element.geometry)
+                   
+
+                    c.fillStyle = pat;
+                    c.globalAlpha = alpha;
+                    c.fill();
+                }*/        
+            }
+        });
+    }
+
+    var preparse = function(){
+
+    }
 
     var onZoom = function(event){
         wheeling = true;
@@ -795,7 +811,7 @@ var page = (function(){
 
     var draw = function(){
         c.save();
-        console.log('draw');
+        
         // Use the identity matrix while clearing the canvas
         c.setTransform(1, 0, 0, 1, 0, 0);
         c.clearRect(0, 0, width, height);
@@ -809,6 +825,8 @@ var page = (function(){
             c2.font = '12px Monospace';
             c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(('Loading ...').toUpperCase(), 10, 15);
         }
+
+        colorize();
 
         c.strokeStyle = "#333", c.lineWidth = .5, c.beginPath(), path.context(c)(graticule()), c.stroke();
         //console.log('[i] currentLevel ' + currentLevel);
@@ -839,7 +857,7 @@ var page = (function(){
             //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(administrativeBorders), c.stroke();
         }
         
-        colorize();
+        
     }
 
     return {

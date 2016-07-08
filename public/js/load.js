@@ -38,8 +38,10 @@ var width = 950,
         y: undefined
     },
     scale = 1,
+    lastLevel,
     wheeling = false,
-    dragging = false;
+    dragging = false,
+    cached = {};
 
 window.addEventListener('load', function(){
 
