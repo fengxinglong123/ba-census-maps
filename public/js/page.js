@@ -50,25 +50,28 @@ var page = (function(){
         }
 
         var setSelector = document.createElement('select');
-        setSelector.style.cssText = 'float: left; max-width: 150px; display: none;';
+        setSelector.style.cssText = 'float: left; max-width: 150px;'; /*  display: none; */
 
         setSelector.onchange = function(e){
             
             currentSet = e.target.value;
-           
-            if(currentLevel == 0)
-                currentFeatures = topo.featured.bosnia;
-
-            if(currentLevel == 1) 
-                currentFeatures = topo.featured.entities;
-
-            if(currentLevel == 2)
-                currentFeatures = topo.featured.cantons;
-        
-            if(currentLevel == 3){
-                currentFeatures = topo.featured.administrative;
-            }
             loading = true;
+
+            var setSpecificSelector = document.body.querySelector('#setSpecific');
+            var subSets = parsed[currentSet].sets;
+
+            setSpecificSelector.innerHTML = '';
+
+            for(var i in subSets){
+                var option = document.createElement('option');
+                option.text = subSets[i];
+                option.value = subSets[i];
+
+                setSpecificSelector.appendChild(option);
+            }
+
+            currentSubSet = subSets[0];
+            cached = {};
             draw();
         };
 
@@ -82,6 +85,60 @@ var page = (function(){
             setSelector.appendChild(option);
         }
 
+        // genders
+        var genderSelector = document.createElement('select');
+        genderSelector.style.cssText = 'float: left; max-width: 150px;'; /*  display: none; */
+
+        var genders = [
+            { name: 'Ukupno', value: 'Ukupno' },
+            { name: 'Muski', value: 'M' },
+            { name: 'Zenski', value: 'Ž' }
+        ];
+
+        for(var i in genders){
+            var option = document.createElement('option');
+            option.text = genders[i].name;
+            option.value = genders[i].value;
+
+            genderSelector.appendChild(option);
+        }
+
+        genderSelector.onchange = function(e){
+            
+            currentGender = e.target.value;
+            
+            loading = true;
+            draw();
+        };
+
+        document.body.appendChild(genderSelector);
+
+        // set specific
+        var setSpecificSelector = document.createElement('select');
+        setSpecificSelector.id = 'setSpecific';
+        setSpecificSelector.style.cssText = 'float: left; max-width: 150px;'; /*  display: none; */
+
+        var subSets = parsed[currentSet].sets;
+
+        for(var i in subSets){
+            var option = document.createElement('option');
+            option.text = subSets[i];
+            option.value = subSets[i];
+
+            setSpecificSelector.appendChild(option);
+        }
+
+        setSpecificSelector.onchange = function(e){
+            
+            currentSubSet = e.target.value;
+           
+            loading = true;
+            draw();
+        };
+
+        document.body.appendChild(setSpecificSelector);
+
+        // text layer
         var textLayer = document.createElement('canvas');
         textLayer.id = 'textLayer';
         textLayer.width = width;
@@ -93,7 +150,6 @@ var page = (function(){
         c2 = document.querySelector('#textLayer').getContext("2d");
         elem = document.querySelector('#textLayer');
 
-        currentLevel = 1;
         draw();
     };
 
@@ -199,8 +255,10 @@ var page = (function(){
         then = Date.now();
         startTime = then;
         moved = true;
-        currentLevel = 0;
+        currentLevel = 1;
         currentSet = 'po_starosti_petogodisnje';
+        currentGender = 'Ukupno';
+        currentSubSet = '0-4';
         sets = [];
         shadedRegions = [];
         color_domain = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
@@ -325,15 +383,19 @@ var page = (function(){
             if(element.geometry.type == 'Polygon'){
 
                 if(gju.pointInPolygon(inverted, element.geometry) && !foundCountryElement){
-                    foundCountryElement = element;
-                    foundCountryGroup = group;
+                    if(group.pol == currentGender){
+                        foundCountryElement = element;
+                        foundCountryGroup = group;
+                    }
                 }
             }
 
             else if(element.geometry.type == 'MultiPolygon'){
                 if(gju.pointInMultiPolygon(inverted, element.geometry) && !foundCountryElement){
-                    foundCountryElement = element;
-                    foundCountryGroup = group;
+                    if(group.pol == currentGender){
+                        foundCountryElement = element;
+                        foundCountryGroup = group;
+                    }
                 }
             }
         })
@@ -653,10 +715,14 @@ var page = (function(){
         // get maximum
         selected.forEach(function(sel, i ){
             set = sel.group;
-            if(set.pol == 'Ukupno'){
+            //debugger
+            if(set.pol == currentGender){
                 // set max according to set's maximum not total maximum
-                if(parseInt(set.total) > max){
+                /*if(parseInt(set.total) > max){
                     max = parseInt(set.total);
+                }*/
+                if(parseInt(set.per_set[currentSubSet]) > max){
+                    max = parseInt(set.per_set[currentSubSet]);
                 }
             }
         });
@@ -666,8 +732,8 @@ var page = (function(){
             set = sel.group;
             element = sel.element;
 
-            if(set.pol == 'Ukupno'){
-                set.total = parseInt(set.total);
+            if(set.pol == currentGender){
+                set.total = parseInt(set.per_set[currentSubSet]);//parseInt(set.total);
                 //console.log(max, set.total, set.name, sel) // OVDE SU REALNE STATISTIKE        
                 var alpha = (set.total * 100) / max,
                     painting = color(alpha);
@@ -680,7 +746,7 @@ var page = (function(){
                     loading = false;
                     c2.clearRect(0, 0, width, height);
                     c2.clearRect(5, 5, (('Loading ...').toUpperCase().length * 9.5), 14); 
-                    draw();
+                    //draw();
                 }
                 
                 // for shaders
@@ -815,7 +881,7 @@ var page = (function(){
         // Use the identity matrix while clearing the canvas
         c.setTransform(1, 0, 0, 1, 0, 0);
         c.clearRect(0, 0, width, height);
-
+    
         // Restore the transform
         c.restore();
 
@@ -826,7 +892,7 @@ var page = (function(){
             c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(('Loading ...').toUpperCase(), 10, 15);
         }
 
-        colorize();
+       
 
         c.strokeStyle = "#333", c.lineWidth = .5, c.beginPath(), path.context(c)(graticule()), c.stroke();
         //console.log('[i] currentLevel ' + currentLevel);
@@ -857,7 +923,7 @@ var page = (function(){
             //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(administrativeBorders), c.stroke();
         }
         
-        
+         colorize();
     }
 
     return {
