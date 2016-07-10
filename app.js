@@ -6,10 +6,10 @@ var http = require('http'),
     app = express(),
     path = require('path'),
     favicon = require('serve-favicon'),
-     xls = require('excel');
+    xls = require('excel');
     
 // all environments
-app.set('port', process.env.PORT || 3001);
+app.set('port', process.env.PORT || 3002);
 
 app.use(express.static(path.join(__dirname, 'public')));
 

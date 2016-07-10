@@ -2,11 +2,13 @@ var page = (function(){
     
     var loadDomElements = function(){
 
-        var canvasEl = document.querySelector('canvas');
-        canvasEl.style.cssText = 'float: left';
+       /* var canvasEl = document.querySelector('canvas');
+        canvasEl.style.cssText = 'float: left';*/
 
+        var holder = document.querySelector('.holder');
+        var controls = document.querySelector('.controls');
         var levelSelector = document.createElement('select');
-        levelSelector.style.cssText = 'float: left';
+        levelSelector.className = 'selectors';
 
         levelSelector.onchange = function(e){
             
@@ -28,13 +30,13 @@ var page = (function(){
             draw();
         };
 
-        document.body.appendChild(levelSelector);
+        controls.appendChild(levelSelector);
 
         var options = [
             ['0', 'Bosna i Hercegovina'],
             ['1', 'Entiteti'],
             ['2', 'Kantoni'],
-            ['3', 'Administrativne jedinice']
+            ['3', 'Opštine']
         ];
 
         for(var i in options){
@@ -50,7 +52,7 @@ var page = (function(){
         }
 
         var setSelector = document.createElement('select');
-        setSelector.style.cssText = 'float: left; max-width: 150px;'; /*  display: none; */
+        setSelector.className = 'selectors';
 
         setSelector.onchange = function(e){
             
@@ -61,7 +63,7 @@ var page = (function(){
             var subSets = parsed[currentSet].sets;
 
             setSpecificSelector.innerHTML = '';
-
+            subSets.unshift('Sve');
             for(var i in subSets){
                 var option = document.createElement('option');
                 option.text = subSets[i];
@@ -75,7 +77,7 @@ var page = (function(){
             draw();
         };
 
-        document.body.appendChild(setSelector);
+        controls.appendChild(setSelector);
 
         for(var i in sets){
             var option = document.createElement('option');
@@ -87,7 +89,7 @@ var page = (function(){
 
         // genders
         var genderSelector = document.createElement('select');
-        genderSelector.style.cssText = 'float: left; max-width: 150px;'; /*  display: none; */
+        genderSelector.className = 'selectors';
 
         var genders = [
             { name: 'Ukupno', value: 'Ukupno' },
@@ -111,14 +113,16 @@ var page = (function(){
             draw();
         };
 
-        document.body.appendChild(genderSelector);
+        controls.appendChild(genderSelector);
 
         // set specific
         var setSpecificSelector = document.createElement('select');
         setSpecificSelector.id = 'setSpecific';
-        setSpecificSelector.style.cssText = 'float: left; max-width: 150px;'; /*  display: none; */
+        setSpecificSelector.className = 'selectors';
 
         var subSets = parsed[currentSet].sets;
+        
+        subSets.unshift('Sve');
 
         for(var i in subSets){
             var option = document.createElement('option');
@@ -136,7 +140,7 @@ var page = (function(){
             draw();
         };
 
-        document.body.appendChild(setSpecificSelector);
+        controls.appendChild(setSpecificSelector);
 
         // text layer
         var textLayer = document.createElement('canvas');
@@ -144,8 +148,8 @@ var page = (function(){
         textLayer.width = width;
         textLayer.height = height;
         textLayer.globalAlpha = 0.1;
-        textLayer.style.cssText = 'position: absolute; top: 0; left: 0; z-index: 2;';
-        document.body.appendChild(textLayer);
+        //textLayer.style.cssText = 'position: absolute; top: 0; left: 0; z-index: 2;';
+        holder.appendChild(textLayer);
 
         c2 = document.querySelector('#textLayer').getContext("2d");
         elem = document.querySelector('#textLayer');
@@ -190,16 +194,16 @@ var page = (function(){
             po_vjeroispovjesti: sve.po_vjeroispovjesti,
             po_maternjem_jeziku: sve.po_maternjem_jeziku,
             po_bracnom_stanju: sve.po_bracnom_stanju,
-            zensko_stanovnistvo_zivorodjeni: sve.zensko_stanovnistvo_zivorodjeni,
+            //zensko_stanovnistvo_zivorodjeni: sve.zensko_stanovnistvo_zivorodjeni,
             nepismeno_stanovnistvo: sve.nepismeno_stanovnistvo,
             po_zavrsenoj_skoli: sve.po_zavrsenoj_skoli,
             racunarski_pismeno: sve.racunarski_pismeno,
             //radno_sposobno_stanovnistvo: sve.radno_sposobno_stanovnistvo,
             osobe_sa_poteskocama: sve.osobe_sa_poteskocama,
             //domacinstva: sve.domacinstva,
-            stambene_zgrade: sve.stambene_zgrade,
-            stanovi_povrsina: sve.stanovi_povrsina,
-            stanovi_broj_osoba: sve.stanovi_broj_osoba,
+            //stambene_zgrade: sve.stambene_zgrade,
+            //stanovi_povrsina: sve.stanovi_povrsina,
+            //stanovi_broj_osoba: sve.stanovi_broj_osoba,
             //poljoprivredna_domacinstva: sve.poljoprivredna_domacinstva
         };
 
@@ -231,9 +235,10 @@ var page = (function(){
             .extent([[-90, -80], [90, 80]])
             .step([2, 2]);
 
-        canvas = d3.select("body").append("canvas")
+        canvas = d3.select(".holder").append("canvas")
             .attr("width", width)
-            .attr("height", height);
+            .attr("height", height)
+            .attr('id', 'renderLayer');
 
         c = canvas.node().getContext("2d");
     
@@ -258,7 +263,7 @@ var page = (function(){
         currentLevel = 1;
         currentSet = 'po_starosti_petogodisnje';
         currentGender = 'Ukupno';
-        currentSubSet = '0-4';
+        currentSubSet = 'Sve';
         sets = [];
         shadedRegions = [];
         color_domain = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
@@ -319,18 +324,27 @@ var page = (function(){
             if(country && country.name){ 
                   
                 if(lastCountryName != country.name){
-                    var title = country.name.toUpperCase() + ' ' + country.group.total.toLocaleString();
+                    var useTotals = currentSubSet == 'Sve' ? true: false;
+                    var currentValue = useTotals ? parseInt(country.group.total) : parseInt(country.group.per_set[currentSubSet]);
+                    var currentValueFormatted = currentValue.toLocaleString();
+                    
+                    var percentage = parseFloat((currentValue * 100) / currentTotal).toFixed(2);
+                    var title = country.name.toUpperCase();
+                    var number =  currentValueFormatted; // + ') ili ' + percentage + '%';
 
                     // incomplete polygons so this is disabled
                     //c.fillStyle = "rgba(0, 102, 153, 0.4)", c.beginPath(), path(country.geometry), c.fill();
                     lastx = x-1;
                     lasty = y-10;
                     // country text
-                    c2.fillStyle = 'rgba(66, 66, 66, 0.8)', c2.beginPath(), c2.fillRect(x -1, y -10, (title.length * 8), 14);
+                    c2.fillStyle = 'rgba(66, 66, 66, 0.8)', c2.beginPath(), c2.fillRect(x -1, y -30, (title.length * 8), 14);
+                    c2.fillStyle = 'rgba(66, 66, 66, 0.8)', c2.beginPath(), c2.fillRect(x -1, y -20, (number.length * 8), 14);
+                    c2.fillStyle = 'rgba(66, 66, 66, 0.8)', c2.beginPath(), c2.fillRect(x -1, y -10, ((percentage + '%').length * 8), 14);
 
                     c2.font = '12px Monospace';
-                    c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(title, x, y);
-
+                    c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(title, x, y - 20);
+                    c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(number, x, y - 10);
+                    c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(percentage + '%', x, y);
 
                     lastCountryName = country.name;
                     lastCountryGeometry = country.geometry;
@@ -413,7 +427,7 @@ var page = (function(){
     };
 
     var colorize = function(){
-            
+        
         if(currentLevel == 0)
             return;
 
@@ -703,7 +717,7 @@ var page = (function(){
     };
 
     var drawElements = function(selected){
-        var max = min = 0;
+        var max = min = currentTotal = 0;
         // remove duplicates
         /*var unduped = selected.filter(function(item, pos, array){
             return selected.map(function(mapItem){ return mapItem.id; }).indexOf(item.id) === pos;
@@ -711,31 +725,40 @@ var page = (function(){
 
         //selected = unduped;
 
-
+        var useTotals = currentSubSet == 'Sve' ? true: false;
         // get maximum
         selected.forEach(function(sel, i ){
             set = sel.group;
             //debugger
             if(set.pol == currentGender){
                 // set max according to set's maximum not total maximum
+
+                var currentValue = useTotals ? parseInt(set.total) : parseInt(set.per_set[currentSubSet]);
+
+
                 /*if(parseInt(set.total) > max){
                     max = parseInt(set.total);
                 }*/
-                if(parseInt(set.per_set[currentSubSet]) > max){
-                    max = parseInt(set.per_set[currentSubSet]);
+                if(currentValue > max){
+                    max = currentValue;
+                    
                 }
+
+                currentTotal += currentValue;
             }
         });
-        // 109 optina
 
+        // 109 optina
+        
         selected.forEach(function(sel, i ){
             set = sel.group;
             element = sel.element;
 
             if(set.pol == currentGender){
-                set.total = parseInt(set.per_set[currentSubSet]);//parseInt(set.total);
+                var currentValue = useTotals ? parseInt(set.total) : parseInt(set.per_set[currentSubSet]);
+                //set.total = parseInt(set.per_set[currentSubSet]);//parseInt(set.total);
                 //console.log(max, set.total, set.name, sel) // OVDE SU REALNE STATISTIKE        
-                var alpha = (set.total * 100) / max,
+                var alpha = (currentValue * 100) / max,
                     painting = color(alpha);
 
                 //console.log(alpha, set.total, painting, set.name);
@@ -767,10 +790,6 @@ var page = (function(){
                 }*/        
             }
         });
-    }
-
-    var preparse = function(){
-
     }
 
     var onZoom = function(event){
@@ -892,38 +911,38 @@ var page = (function(){
             c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(('Loading ...').toUpperCase(), 10, 15);
         }
 
-       
+       colorize();
 
         c.strokeStyle = "#333", c.lineWidth = .5, c.beginPath(), path.context(c)(graticule()), c.stroke();
         //console.log('[i] currentLevel ' + currentLevel);
         // borders
         if(currentLevel == 0){
-            c.strokeStyle = "#006699", c.lineWidth =1.5, c.beginPath(), path(topo.meshed.bosnia), c.stroke();
+            c.strokeStyle = "#000", c.lineWidth =1.5, c.beginPath(), path(topo.meshed.bosnia), c.stroke();
             //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(borders), c.stroke();
         }
 
         if(currentLevel == 1){
-            c.strokeStyle = "#0077aa", c.lineWidth = 1.2, c.beginPath(), path(topo.meshed.entities), c.stroke();
+            c.strokeStyle = "#000", c.lineWidth = 1.2, c.beginPath(), path(topo.meshed.entities), c.stroke();
             
         }
         
         if(currentLevel == 2){
-            c.strokeStyle = "#006699", c.lineWidth =1.5, c.beginPath(), path(topo.meshed.bosnia), c.stroke();
-            c.strokeStyle = "#0088bb", c.lineWidth = 1, c.beginPath(), path(topo.meshed.cantons), c.stroke(); 
+            c.strokeStyle = "#000", c.lineWidth =1.5, c.beginPath(), path(topo.meshed.bosnia), c.stroke();
+            c.strokeStyle = "#000", c.lineWidth = 1, c.beginPath(), path(topo.meshed.cantons), c.stroke(); 
 
             //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(borders), c.stroke();
             //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(cantonsBorders), c.stroke();
         }
 
         if(currentLevel == 3){
-            c.strokeStyle = "#006699", c.lineWidth =1.5, c.beginPath(), path(topo.meshed.bosnia), c.stroke();
-            c.strokeStyle = "#0099cc", c.lineWidth = 0.5, c.beginPath(), path(topo.meshed.administrative), c.stroke();
+            c.strokeStyle = "#000", c.lineWidth =1.5, c.beginPath(), path(topo.meshed.bosnia), c.stroke();
+            c.strokeStyle = "#000", c.lineWidth = 0.5, c.beginPath(), path(topo.meshed.administrative), c.stroke();
 
             //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(borders), c.stroke();
             //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(administrativeBorders), c.stroke();
         }
         
-         colorize();
+         
     }
 
     return {
