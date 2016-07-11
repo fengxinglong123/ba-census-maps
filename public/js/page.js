@@ -42,7 +42,7 @@ var page = (function(){
         for(var i in options){
             var option = document.createElement('option');
             
-            if(options[i][0] == 1)
+            if(options[i][0] == 3)
                 option.selected = true;
 
             option.text = options[i][1];
@@ -66,6 +66,7 @@ var page = (function(){
             subSets.unshift('Sve');
             for(var i in subSets){
                 var option = document.createElement('option');
+
                 option.text = subSets[i];
                 option.value = subSets[i];
 
@@ -81,6 +82,10 @@ var page = (function(){
 
         for(var i in sets){
             var option = document.createElement('option');
+
+            if(sets[i].name == currentSet) 
+                option.selected = true;
+                
             option.text = sets[i].dataset.split(' / ')[0];
             option.value = sets[i].name;
 
@@ -251,22 +256,7 @@ var page = (function(){
         elemLeft = elem.offsetLeft,
         elemTop = elem.offsetTop;
         context = elem.getContext('2d');
-        lastCountryName = '';
-        lastCountryGeometry = null;
-        currentFeatures = [];
-        frameCount = 0;
-        fps; 
-        fpsInterval = 1000 / fps;
-        then = Date.now();
-        startTime = then;
-        moved = true;
-        currentLevel = 1;
-        currentSet = 'po_starosti_petogodisnje';
-        currentGender = 'Ukupno';
-        currentSubSet = 'Sve';
-        sets = [];
-        shadedRegions = [];
-        color_domain = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
+        
             //legend_labels = ["< 50", "50+", "150+", "350+", "750+", "> 1500"],
         color = d3.scale.threshold()
             .domain(color_domain)
@@ -280,14 +270,6 @@ var page = (function(){
             cantons: null,
             administrative: null
         };
-
-        /*zoom = d3.behavior.zoom()
-            .center([width / 2, height / 2])
-            .on("zoom", onZoom)
-            .on("zoomend", function(){ dragging = false; });*/
-
-        
-        //canvas.call(zoom);
 
         // load datasets
         queue()
@@ -551,6 +533,12 @@ var page = (function(){
                         }
                             
                         if(element.properties['NAME_1'].indexOf('Federacija') > -1){
+
+                            if(element.properties['NAME_3'].indexOf('Stari Grad Sarajevo') > -1 
+                                && groupname.indexOf('STARI GRAD SARAJEVO') > -1 ){
+                                element.properties[param] = groupname;
+                            }
+
                             if(element.properties[param].indexOf('Mostar') > -1 && groupname.indexOf('MOSTAR') > -1){
                                 element.properties[param] = groupname;
                             }
@@ -603,6 +591,7 @@ var page = (function(){
                         }
 
                         if(element.properties['NAME_1'].indexOf('Srpska') > -1){
+
                             if(element.properties[param].indexOf('Mostar') > -1 && groupname.indexOf('ISTOČNI MOSTAR') > -1){
                                 element.properties[param] = groupname;
                             }
@@ -639,7 +628,7 @@ var page = (function(){
                                 element.properties[param] = groupname;
                             }
 
-                            if(element.properties[param].indexOf('Srpski Drvar') > -1 && groupname.indexOf('DRVAR') > -1 ){
+                            if(element.properties[param].indexOf('Srpski Drvar') > -1 && groupname.indexOf('ISTOČNI DRVAR') > -1 ){
                                 element.properties[param] = groupname;
                             }
 
@@ -701,7 +690,7 @@ var page = (function(){
                 clearInterval(continueInterval);
                 
                 drawElements(selected);
-                
+        
                 cached[currentLevel] = selected;
                 currentFeatures = selected;
             }
@@ -749,7 +738,8 @@ var page = (function(){
         });
 
         // 109 optina
-        
+        selectedLoadCount = selected.length;
+
         selected.forEach(function(sel, i ){
             set = sel.group;
             element = sel.element;
@@ -761,19 +751,23 @@ var page = (function(){
                 var alpha = (currentValue * 100) / max,
                     painting = color(alpha);
 
-                //console.log(alpha, set.total, painting, set.name);
                 c.fillStyle = painting, c.beginPath(), path(element.geometry), c.fill();
-
                 
-                if(loading && (selectedLoadCount == 0)){
+                if(loading && (selectedLoadCount == 2)){
                     loading = false;
                     c2.clearRect(0, 0, width, height);
                     c2.clearRect(5, 5, (('Loading ...').toUpperCase().length * 9.5), 14); 
                     //draw();
                 }
+
+                selectedLoadCount--;
+
+
                 
                 // for shaders
+
                 /*for(j in set.per_set){
+
 
                     var cat = set.per_set[j],
                         alpha = ((cat * 100) / max) / 100,
@@ -791,6 +785,8 @@ var page = (function(){
             }
         });
     }
+
+    
 
     var onZoom = function(event){
         wheeling = true;
@@ -880,7 +876,6 @@ var page = (function(){
     };
 
     var animate = function() {
-        requestAnimationFrame(animate);
 
         now = Date.now();
         elapsed = now - then;
@@ -889,8 +884,8 @@ var page = (function(){
         if(elapsed > fpsInterval) {
             
             then = now - (elapsed % fpsInterval);
-            /*if(moved)
-                draw();*/
+            if(moved)
+                requestAnimationFrame(animate);
         }
     };
 
@@ -911,38 +906,22 @@ var page = (function(){
             c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(('Loading ...').toUpperCase(), 10, 15);
         }
 
-       colorize();
-
+        // graticule
         c.strokeStyle = "#333", c.lineWidth = .5, c.beginPath(), path.context(c)(graticule()), c.stroke();
-        //console.log('[i] currentLevel ' + currentLevel);
-        // borders
-        if(currentLevel == 0){
-            c.strokeStyle = "#000", c.lineWidth =1.5, c.beginPath(), path(topo.meshed.bosnia), c.stroke();
-            //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(borders), c.stroke();
-        }
 
-        if(currentLevel == 1){
-            c.strokeStyle = "#000", c.lineWidth = 1.2, c.beginPath(), path(topo.meshed.entities), c.stroke();
-            
-        }
+        // country border
+        c.strokeStyle = "#000", c.lineWidth = 2, c.beginPath(), path(topo.meshed.bosnia), c.stroke();
+
+        // entities borders
+        c.strokeStyle = "#000", c.lineWidth = 1.5, c.beginPath(), path(topo.meshed.entities), c.stroke();
+
+        // cantons
+        c.strokeStyle = "#000", c.lineWidth = 1.2, c.beginPath(), path(topo.meshed.cantons), c.stroke(); 
+
+        // counties / cities
+        c.strokeStyle = "#000", c.lineWidth = 1, c.beginPath(), path(topo.meshed.administrative), c.stroke();
         
-        if(currentLevel == 2){
-            c.strokeStyle = "#000", c.lineWidth =1.5, c.beginPath(), path(topo.meshed.bosnia), c.stroke();
-            c.strokeStyle = "#000", c.lineWidth = 1, c.beginPath(), path(topo.meshed.cantons), c.stroke(); 
-
-            //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(borders), c.stroke();
-            //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(cantonsBorders), c.stroke();
-        }
-
-        if(currentLevel == 3){
-            c.strokeStyle = "#000", c.lineWidth =1.5, c.beginPath(), path(topo.meshed.bosnia), c.stroke();
-            c.strokeStyle = "#000", c.lineWidth = 0.5, c.beginPath(), path(topo.meshed.administrative), c.stroke();
-
-            //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(borders), c.stroke();
-            //c.strokeStyle = "rgba(0, 102, 153, 0.1)", c.lineWidth =1.5, c.beginPath(), path2(administrativeBorders), c.stroke();
-        }
-        
-         
+        colorize();
     }
 
     return {
