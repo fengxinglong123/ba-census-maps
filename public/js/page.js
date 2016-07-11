@@ -7,7 +7,15 @@ var page = (function(){
 
         var holder = document.querySelector('.holder');
         var controls = document.querySelector('.controls');
+
+        var title = document.createElement('h2');
+        title.innerHTML = 'Popis 2013';
+        controls.appendChild(title);
+
+        // levels
         var levelSelector = document.createElement('select');
+        var levelLabel = document.createElement('label');
+
         levelSelector.className = 'selectors';
 
         levelSelector.onchange = function(e){
@@ -30,7 +38,9 @@ var page = (function(){
             draw();
         };
 
-        controls.appendChild(levelSelector);
+        levelLabel.innerHTML += 'Administrativni nivo';
+        levelLabel.appendChild(levelSelector);
+        controls.appendChild(levelLabel);
 
         var options = [
             ['0', 'Bosna i Hercegovina'],
@@ -51,7 +61,9 @@ var page = (function(){
             levelSelector.appendChild(option);
         }
 
+        // sets
         var setSelector = document.createElement('select');
+        var setlLabel = document.createElement('label');
         setSelector.className = 'selectors';
 
         setSelector.onchange = function(e){
@@ -63,7 +75,10 @@ var page = (function(){
             var subSets = parsed[currentSet].sets;
 
             setSpecificSelector.innerHTML = '';
-            subSets.unshift('Sve');
+            
+            if(subSets.indexOf('Sve') == -1)
+                subSets.unshift('Sve');
+            
             for(var i in subSets){
                 var option = document.createElement('option');
 
@@ -78,7 +93,9 @@ var page = (function(){
             draw();
         };
 
-        controls.appendChild(setSelector);
+        setlLabel.innerHTML = 'Statistički izvor';
+        setlLabel.appendChild(setSelector);
+        controls.appendChild(setlLabel);
 
         for(var i in sets){
             var option = document.createElement('option');
@@ -94,6 +111,7 @@ var page = (function(){
 
         // genders
         var genderSelector = document.createElement('select');
+        var genderLabel = document.createElement('label');
         genderSelector.className = 'selectors';
 
         var genders = [
@@ -118,10 +136,13 @@ var page = (function(){
             draw();
         };
 
-        controls.appendChild(genderSelector);
+        genderLabel.innerHTML = 'Pol';
+        genderLabel.appendChild(genderSelector);
+        controls.appendChild(genderLabel);
 
         // set specific
         var setSpecificSelector = document.createElement('select');
+        var setSpecificLabel = document.createElement('label');
         setSpecificSelector.id = 'setSpecific';
         setSpecificSelector.className = 'selectors';
 
@@ -145,7 +166,26 @@ var page = (function(){
             draw();
         };
 
-        controls.appendChild(setSpecificSelector);
+        setSpecificLabel.innerHTML = 'Statistički skup';
+        setSpecificLabel.appendChild(setSpecificSelector);
+        controls.appendChild(setSpecificLabel);
+
+        // domination
+        var dominationLabel = document.createElement('label');
+        dominationLabel.addEventListener('change', function(e){
+            domination = e.target.checked;
+            loading = true;
+            draw();
+        });
+
+        var dominationCheckbox = document.createElement('input');
+        dominationCheckbox.type = 'checkbox';
+        dominationCheckbox.title = 'Dominacija';
+        
+        controls.appendChild(dominationLabel);
+        dominationLabel.appendChild(dominationCheckbox);
+        dominationLabel.innerHTML += 'Dominacija';
+        dominationLabel.title = 'Dominacija prikazuje koja grupa ima većinu u datom skupu nad dijelom teritorije.'
 
         // text layer
         var textLayer = document.createElement('canvas');
@@ -155,6 +195,20 @@ var page = (function(){
         textLayer.globalAlpha = 0.1;
         //textLayer.style.cssText = 'position: absolute; top: 0; left: 0; z-index: 2;';
         holder.appendChild(textLayer);
+
+        // description
+        var description = document.createElement('div');
+        description.id = 'description';
+
+        var descriptionHtml = [
+            'Prigodna vizuelizacija popisa u BiH, održnaog 2013. godine.<br/>',
+            '<hr/>Boje:<br/>',
+            'Nijanse od zelene do žute prikazuju ukupan broj stanovnika po datom skupu na niže.<br/>',
+            'Nijanse od crvene do roze prikazuju zastupljenost, od relativne do apsolutne.'
+        ].join('');
+
+        description.innerHTML = descriptionHtml;
+        controls.appendChild(description);
 
         c2 = document.querySelector('#textLayer').getContext("2d");
         elem = document.querySelector('#textLayer');
@@ -227,6 +281,12 @@ var page = (function(){
 
     var load = function(){
 
+        loadCrap = document.createElement('div');
+        loadCrap.id = 'loading';
+        loadCrap.innerHTML = 'Učitavanje ...';
+
+        document.body.appendChild(loadCrap);
+
         projection = d3.geo.satellite()
             .distance(1.5)
             .scale(9797)
@@ -259,10 +319,8 @@ var page = (function(){
         
             //legend_labels = ["< 50", "50+", "150+", "350+", "750+", "> 1500"],
         color = d3.scale.threshold()
-            .domain(color_domain)
-            .range([
-                 '#ffffe0','#f7fc94','#e7f87e','#d7f273','#c9ec6b','#bbe666','#ace061','#a0d95d','#92d258','#86cc54','#7bc650','#70be4b','#65b745','#5ab13f','#4faa39','#44a333','#3a9c2b','#2f9523','#238d1a','#14870e','#008000'
-               ]);
+            .domain(colorDomain)
+            .range(defaultColors);
 
         topo = {
             bosnia: null,
@@ -690,7 +748,9 @@ var page = (function(){
                 clearInterval(continueInterval);
                 
                 drawElements(selected);
-        
+
+                loadCrap && loadCrap.remove();
+                
                 cached[currentLevel] = selected;
                 currentFeatures = selected;
             }
@@ -721,16 +781,10 @@ var page = (function(){
             //debugger
             if(set.pol == currentGender){
                 // set max according to set's maximum not total maximum
-
                 var currentValue = useTotals ? parseInt(set.total) : parseInt(set.per_set[currentSubSet]);
 
-
-                /*if(parseInt(set.total) > max){
-                    max = parseInt(set.total);
-                }*/
                 if(currentValue > max){
                     max = currentValue;
-                    
                 }
 
                 currentTotal += currentValue;
@@ -738,25 +792,60 @@ var page = (function(){
         });
 
         // 109 optina
-        selectedLoadCount = selected.length;
+        selectedLoadCount = Math.round(selected.length / 3); // because three genders: male, female and all
 
         selected.forEach(function(sel, i ){
             set = sel.group;
             element = sel.element;
 
             if(set.pol == currentGender){
-                var currentValue = useTotals ? parseInt(set.total) : parseInt(set.per_set[currentSubSet]);
+                var dominatingSubSet, currentValue;
+
+                currentValue = useTotals ? parseInt(set.total) : parseInt(set.per_set[currentSubSet]);
+
+                if(domination){
+                    dominatingSubSet = Object.keys( set.per_set ).sort(function(a, b){ return set.per_set[a] - set.per_set[b] } ).reverse()[0];
+
+                    if(dominatingSubSet == currentSubSet){
+
+                        currentValue = useTotals ? parseInt(set.total) : parseInt(set.per_set[dominatingSubSet]);
+
+                        color = d3.scale.threshold()
+                            .domain(colorDomain)
+                            .range(redColors);
+
+                        //set.dominating = true;
+                    }
+                    else {
+                        color = d3.scale.threshold()
+                            .domain(colorDomain)
+                            .range(defaultColors);
+                    }
+                } else {
+                    color = d3.scale.threshold()
+                        .domain(colorDomain)
+                        .range(defaultColors);
+                }
+
+                
                 //set.total = parseInt(set.per_set[currentSubSet]);//parseInt(set.total);
-                //console.log(max, set.total, set.name, sel) // OVDE SU REALNE STATISTIKE        
+                //console.log(max, set.total, set.name, sel) // OVDE SU REALNE STATISTIKE
+                
+                // full exclusion
+                /*if(!set.dominating){
+
+                    return;
+                }*/
+
                 var alpha = (currentValue * 100) / max,
                     painting = color(alpha);
 
                 c.fillStyle = painting, c.beginPath(), path(element.geometry), c.fill();
                 
-                if(loading && (selectedLoadCount == 2)){
+                if(loading && (selectedLoadCount <= 2)){
                     loading = false;
                     c2.clearRect(0, 0, width, height);
-                    c2.clearRect(5, 5, (('Loading ...').toUpperCase().length * 9.5), 14); 
+                    c2.clearRect(5, 5, (('Učitavanje ...').toUpperCase().length * 9.5), 14); 
                     //draw();
                 }
 
@@ -900,10 +989,10 @@ var page = (function(){
         c.restore();
 
         if(loading){
-            var loadingStyle = (('Loading ...').toUpperCase().length * 9.5);
+            var loadingStyle = (('Učitavanje ...').toUpperCase().length * 9.5);
             c2.fillStyle = 'rgba(66, 66, 66, 0.8)', c2.beginPath(), c2.fillRect(5 , 5, loadingStyle, 14);
             c2.font = '12px Monospace';
-            c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(('Loading ...').toUpperCase(), 10, 15);
+            c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(('Učitavanje ...').toUpperCase(), 10, 15);
         }
 
         // graticule
@@ -920,6 +1009,29 @@ var page = (function(){
 
         // counties / cities
         c.strokeStyle = "#000", c.lineWidth = 1, c.beginPath(), path(topo.meshed.administrative), c.stroke();
+
+        // legend
+        defaultColors.forEach(function(color, i){
+            c.strokeStyle = "#dfdfdf";
+            c.lineWidth = 1; 
+            c.beginPath();
+            c.fillStyle = color;
+            c.rect(width - (defaultColors.length * (i / 1.5)) , height - 12, 10, 10);
+            c.stroke();
+            c.fill();
+        });
+
+        if(domination){
+            redColors.forEach(function(color, i){
+                c.strokeStyle = "#dfdfdf";
+                c.lineWidth = 1; 
+                c.beginPath();
+                c.fillStyle = color;
+                c.rect(width - (redColors.length * (i / 1.5)) , height - 25, 10, 10);
+                c.stroke();
+                c.fill();
+            });
+        }
         
         colorize();
     }

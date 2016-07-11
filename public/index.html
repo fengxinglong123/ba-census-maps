@@ -17,12 +17,16 @@
 
         </script>
         <style type="text/css">
+            * {
+                font-family: monospace;
+            }
 
             body {
                 margin: 0px;
                 padding: 0px;
                 width: 100vw;
                 height: 100vh;
+                font-family: monospace;
             }
 
             .holder {
@@ -35,6 +39,7 @@
             .controls {
                 width: 10vw;
                 height: 3px;
+                padding-top: 10px;
                 float: left;
                 display: block;
             }
@@ -58,6 +63,31 @@
                 top: 0; 
                 left: 0; 
                 z-index: 1;
+            }
+
+            .controls label {
+                width: 100%;
+                display: block;
+            }
+
+            #loading {
+                position: absolute;
+                top: 5px;
+                left: 5px;
+                width: 120px;
+                height: 17px;
+                padding: 5px;
+                border-radius: 3px;
+                background: rgba(11,11,11, 0.5);
+                color: #fff;
+            }
+
+            #description {
+                border-top: 1px solid #dfdfdf;
+                margin-top:  20px;
+                padding: 5px;
+                padding-top: 10px;
+                font-size: 10px;
             }
 
         </style>
