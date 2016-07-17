@@ -43,7 +43,7 @@ var page = (function(){
         controls.appendChild(levelLabel);
 
         var options = [
-            ['0', 'Bosna i Hercegovina'],
+            /*['0', 'Bosna i Hercegovina'],*/
             ['1', 'Entiteti'],
             ['2', 'Kantoni'],
             ['3', 'Opštine']
@@ -1016,7 +1016,7 @@ var page = (function(){
             c.lineWidth = 1; 
             c.beginPath();
             c.fillStyle = color;
-            c.rect(width - (defaultColors.length * (i / 1.5)) , height - 12, 10, 10);
+            c.rect(width - (defaultColors.length * (i / 1.5)) - 15, height - 12, 10, 10);
             c.stroke();
             c.fill();
         });
@@ -1027,7 +1027,7 @@ var page = (function(){
                 c.lineWidth = 1; 
                 c.beginPath();
                 c.fillStyle = color;
-                c.rect(width - (redColors.length * (i / 1.5)) , height - 25, 10, 10);
+                c.rect(width - (redColors.length * (i / 1.5)) - 15, height - 25, 10, 10);
                 c.stroke();
                 c.fill();
             });
