@@ -1,5 +1,5 @@
 // load
-var width = 950,
+var width = 750,
     height = 650,
     c, 
     c2,
