@@ -1,7 +1,7 @@
 // load
-var width = 750,
-    height = 650,
-    c, 
+var width = 950,
+    height = 750,
+    c,
     c2,
     projection,
     canvas,

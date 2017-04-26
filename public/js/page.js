@@ -4,6 +4,8 @@ var page = (function(){
 
        /* var canvasEl = document.querySelector('canvas');
         canvasEl.style.cssText = 'float: left';*/
+        window.dominationSquareMeters = 0;
+        window.totalSquareMeters = 0;
 
         var holder = document.querySelector('.holder');
         var controls = document.querySelector('.controls');
@@ -368,6 +370,10 @@ var page = (function(){
                     var currentValue = useTotals ? parseInt(country.group.total) : parseInt(country.group.per_set[currentSubSet]);
                     var currentValueFormatted = currentValue.toLocaleString();
 
+                    var totalTerritory = totalSquareMeters;
+                    var dominatingTerritory = dominationSquareMeters;
+                    var percentageDominatingTerritory = parseFloat((dominatingTerritory * 100) / totalTerritory).toFixed(2);
+                    var percentageDominatingTerritoryText = percentageDominatingTerritory + '% od ukupne teritorije';
                     var percentage = parseFloat((currentValue * 100) / currentTotal).toFixed(2);
                     var title = country.name.toUpperCase();
                     var number = 'Ukupno ' + currentValueFormatted; // + ') ili ' + percentage + '%';
@@ -377,16 +383,26 @@ var page = (function(){
                     //c.fillStyle = "rgba(0, 102, 153, 0.4)", c.beginPath(), path(country.geometry), c.fill();
                     lastx = x-1;
                     lasty = y-10;
+
                     // country text
-                    c2.fillStyle = 'rgba(66, 66, 66, 0.8)', c2.beginPath(), c2.fillRect(x -1, y -40, (title.length * 8), 14);
-                    c2.fillStyle = 'rgba(66, 66, 66, 0.8)', c2.beginPath(), c2.fillRect(x -1, y -30, (number.length * 8), 14);
-                    //c2.fillStyle = 'rgba(66, 66, 66, 0.8)', c2.beginPath(), c2.fillRect(x -1, y -20, (levelText.length * 8), 14);
+                    c2.fillStyle = 'rgba(66, 66, 66, 0.8)', c2.beginPath(), c2.fillRect(x -1, y -48, (title.length * 8), 14);
+                    c2.fillStyle = 'rgba(66, 66, 66, 0.8)', c2.beginPath(), c2.fillRect(x -1, y -34, (number.length * 8), 14);
+
+                    if (domination) {
+                        c2.fillStyle = 'rgba(66, 66, 66, 0.8)', c2.beginPath(), c2.fillRect(x -1, y -22, (percentageDominatingTerritoryText.length * 8), 14);
+                    }
+
                     c2.fillStyle = 'rgba(66, 66, 66, 0.8)', c2.beginPath(), c2.fillRect(x -1, y -10, (defText.length * 8), 14);
 
+                    ///
                     c2.font = '12px Monospace';
-                    c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(title, x, y - 30);
-                    c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(number, x, y - 20);
-                    //c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(levelText, x, y - 10);
+                    c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(title, x, y - 34);
+                    c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(number, x, y - 22);
+
+                    if (domination) {
+                        c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(percentageDominatingTerritoryText, x, y - 10);
+                    }
+
                     c2.fillStyle = "#fff", c2.beginPath(), c2.fillText(defText, x, y);
 
                     lastCountryName = country.name;
@@ -807,13 +823,18 @@ var page = (function(){
         // 109 optina
         selectedLoadCount = Math.round(selected.length / 3); // because three genders: male, female and all
 
+        // reset counters
+        totalSquareMeters = 0;
+        dominationSquareMeters = 0;
+
         selected.forEach(function(sel, i ){
+            var fieldgeometry = sel.element.geometry;
             set = sel.group;
             element = sel.element;
 
             if(set.pol == currentGender){
                 var dominatingSubSet, currentValue;
-
+                totalSquareMeters += geometry(fieldgeometry) / 1000000;
                 currentValue = useTotals ? parseInt(set.total) : parseInt(set.per_set[currentSubSet]);
 
                 if(domination){
@@ -827,6 +848,10 @@ var page = (function(){
                             .domain(colorDomain)
                             .range(redColors);
 
+
+
+                        dominationSquareMeters += geometry(fieldgeometry) / 1000000;
+
                         //set.dominating = true;
                     }
                     else {
@@ -839,6 +864,8 @@ var page = (function(){
                         .domain(colorDomain)
                         .range(defaultColors);
                 }
+
+
 
 
                 //set.total = parseInt(set.per_set[currentSubSet]);//parseInt(set.total);
@@ -885,10 +912,109 @@ var page = (function(){
                     c.fill();
                 }*/
             }
+
+
         });
     }
 
+    ///////////////////////////////////////
+    // taken from https://github.com/mapbox/geojson-area/blob/master/index.js
 
+    function polygonArea(coords) {
+        var area = 0;
+        if (coords && coords.length > 0) {
+            area += Math.abs(ringArea(coords[0]));
+            for (var i = 1; i < coords.length; i++) {
+                area -= Math.abs(ringArea(coords[i]));
+            }
+        }
+        return area;
+    }
+
+    /**
+     * Calculate the approximate area of the polygon were it projected onto
+     *     the earth.  Note that this area will be positive if ring is oriented
+     *     clockwise, otherwise it will be negative.
+     *
+     * Reference:
+     * Robert. G. Chamberlain and William H. Duquette, "Some Algorithms for
+     *     Polygons on a Sphere", JPL Publication 07-03, Jet Propulsion
+     *     Laboratory, Pasadena, CA, June 2007 http://trs-new.jpl.nasa.gov/dspace/handle/2014/40409
+     *
+     * Returns:
+     * {float} The approximate signed geodesic area of the polygon in square
+     *     meters.
+     */
+
+    // wgs84 from https://github.com/mapbox/wgs84/blob/master/index.js
+    var wgs84 = {};
+
+    wgs84.RADIUS = 6378137;
+    wgs84.FLATTENING_DENOM = 298.257223563
+    wgs84.FLATTENING = 1/wgs84.FLATTENING_DENOM;
+    wgs84.POLAR_RADIUS = wgs84.RADIUS*(1-wgs84.FLATTENING);
+
+    function geometry(_) {
+        var area = 0, i;
+        switch (_.type) {
+            case 'Polygon':
+                return polygonArea(_.coordinates);
+            case 'MultiPolygon':
+                for (i = 0; i < _.coordinates.length; i++) {
+                    area += polygonArea(_.coordinates[i]);
+                }
+                return area;
+            case 'Point':
+            case 'MultiPoint':
+            case 'LineString':
+            case 'MultiLineString':
+                return 0;
+            case 'GeometryCollection':
+                for (i = 0; i < _.geometries.length; i++) {
+                    area += geometry(_.geometries[i]);
+                }
+                return area;
+        }
+    }
+
+    function ringArea(coords) {
+        var p1, p2, p3, lowerIndex, middleIndex, upperIndex, i,
+        area = 0,
+        coordsLength = coords.length;
+
+        if (coordsLength > 2) {
+            for (i = 0; i < coordsLength; i++) {
+                if (i === coordsLength - 2) {// i = N-2
+                    lowerIndex = coordsLength - 2;
+                    middleIndex = coordsLength -1;
+                    upperIndex = 0;
+                } else if (i === coordsLength - 1) {// i = N-1
+                    lowerIndex = coordsLength - 1;
+                    middleIndex = 0;
+                    upperIndex = 1;
+                } else { // i = 0 to N-3
+                    lowerIndex = i;
+                    middleIndex = i+1;
+                    upperIndex = i+2;
+                }
+                p1 = coords[lowerIndex];
+                p2 = coords[middleIndex];
+                p3 = coords[upperIndex];
+                area += ( rad(p3[0]) - rad(p1[0]) ) * Math.sin( rad(p2[1]));
+            }
+
+            area = area * wgs84.RADIUS * wgs84.RADIUS / 2;
+        }
+
+        return area;
+    }
+
+    function rad(_) {
+        return _ * Math.PI / 180;
+    }
+
+
+    ///////////////////////////////////////
 
     var onZoom = function(event){
         wheeling = true;
